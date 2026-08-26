@@ -35,7 +35,7 @@ void my_main(void)
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 		uart_printf("usart1 is OK!\r\n");
 		//uart_send_periodic_task(&huart1);
-		uart_printf("offset_a=%d,offset_b=%d\r\n",offset_a,offset_b);
+		uart_printf("offset_a=%d,offset_b=%d\r\n",ADC_parm.offset_a,ADC_parm.offset_b);
 		uart_send_periodic_task(&huart1);
 		HAL_Delay(1);
 		HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
@@ -49,7 +49,7 @@ void my_main(void)
 		HAL_TIM_Base_Start(&htim1);
     while(1)
     {
-				uart_printf("offset_a=%d,offset_b=%d,adc1_value=%d,adc2_value=%d\r\n",offset_a,offset_b,adc1_value,adc2_value);
+				uart_printf("offset_a=%d,offset_b=%d,adc1_value=%d,adc2_value=%d\r\n",ADC_parm.offset_a,ADC_parm.offset_b,adc1_value,adc2_value);
 				uart_send_periodic_task(&huart1);
         //canopen_app_process();
 				HAL_Delay(100);
@@ -76,29 +76,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	static uint32_t SUM_A ,SUM_B=10;//求偏置
 	static char InitOverFlag=0;
-	static int16_t add_i=0;
+
     if (hadc->Instance == ADC1) {
 			
 				adc1_value = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
 				adc2_value = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
-				if(add_i<2000&&!InitOverFlag)
+				if(!InitOverFlag)
 				{
-					// 读取 ADC1 和 ADC2 的注入结果
-					
-					SUM_A+=adc1_value;
-					SUM_B+=adc2_value;
-					add_i++;
-					
+					InitOverFlag=ADC_Init(&ADC_parm);
 				}
-				
-				offset_a =	(uint16_t)	(SUM_A / 2000U);
-				offset_b =	(uint16_t)	(SUM_B / 2000U);
 
-//        // 转换为电流值
-//        float iA = (adc1_value - offsetA) * scaleA;
-//        float iB = (adc2_value - offsetB) * scaleB;
-        
+				// 转换为电流值
+				CurrentCalculation(&ADC_parm);
         // 执行 FOC 运算
+				
         // ...
     }
 }
