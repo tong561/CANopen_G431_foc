@@ -17,23 +17,25 @@ Library Manager: ArmAr.exe V5.06 update 7 (build 960)
 Hex Converter:   FromElf.exe V5.06 update 7 (build 960)
 CPU DLL:         SARMCM3.DLL V5.43.0.0
 Dialog DLL:      DCM.DLL V1.17.5.0
-Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.3.1.0
+Target DLL:      CMSIS_AGDI.dll V1.33.24.0
 Dialog DLL:      TCM.DLL V1.56.6.0
  
 <h2>Project:</h2>
 D:\WeCanCode\Wu\G431_foc\MDK-ARM\G431_foc.uvprojx
-Project File Date:  08/19/2026
+Project File Date:  08/26/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\keilv5\ARM\ARMCOMPILER_506\Bin'
 Build target 'G431_foc'
+assembling startup_stm32g431xx.s...
+compiling myADC.c...
+compiling main.c...
+compiling adc.c...
 compiling my_mian.c...
-..\myCode\my_mian.c(11): error:  #20: identifier "hcan1" is undefined
-      canopenNodeSTM32->CANHandle = &hcan1;//初始化canopen协议层CAN句柄
-..\myCode\my_mian.c(14): warning:  #69-D: integer conversion resulted in truncation
-      canopenNodeSTM32->baudrate = 500000;//设置canopen协议层波特率为500Kbps
-..\myCode\my_mian.c: 1 warning, 1 error
-"G431_foc\G431_foc.axf" - 1 Error(s), 1 Warning(s).
+linking...
+Program Size: Code=23100 RO-data=584 RW-data=96 ZI-data=7136  
+FromELF: creating hex file...
+"G431_foc\G431_foc.axf" - 0 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -57,8 +59,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@6.1.1
       Include file:  CMSIS/Core/Include/tz_context.h
-Target not created.
-Build Time Elapsed:  00:00:04
+Build Time Elapsed:  00:00:13
 </pre>
 </body>
 </html>

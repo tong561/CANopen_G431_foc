@@ -57,6 +57,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define DRV8313_EN_Pin GPIO_PIN_11
+#define DRV8313_EN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

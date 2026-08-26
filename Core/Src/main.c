@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "fdcan.h"
 #include "spi.h"
 #include "tim.h"
@@ -28,7 +29,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "my_main.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,7 +72,10 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  SCB->VTOR = 0x08000000;//BOOT0û����Ҫ�����λ�ж�������
+    __DSB();
+    __ISB();
+    __enable_irq();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -92,6 +96,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_FDCAN1_Init();
@@ -102,7 +107,7 @@ int main(void)
   MX_USB_PCD_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-
+	my_main();
   /* USER CODE END 2 */
 
   /* Infinite loop */

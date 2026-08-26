@@ -43,7 +43,7 @@ g431_foc\my_mian.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h
 g431_foc\my_mian.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
 g431_foc\my_mian.o: ..\myCode\my_main.h
 g431_foc\my_mian.o: ../Core/Inc/tim.h
-g431_foc\my_mian.o: ../Core/Inc/fdcan.h
+g431_foc\my_mian.o: ../Core/Inc/adc.h
 g431_foc\my_mian.o: ../CANopenNode_STM32/CO_app_STM32.h
 g431_foc\my_mian.o: ../CANopenNode/CANopen.h
 g431_foc\my_mian.o: ../CANopenNode/301/CO_driver.h
@@ -70,3 +70,9 @@ g431_foc\my_mian.o: ../CANopenNode/305/CO_LSS.h
 g431_foc\my_mian.o: ../CANopenNode/305/CO_LSSmaster.h
 g431_foc\my_mian.o: ../CANopenNode/309/CO_gateway_ascii.h
 g431_foc\my_mian.o: ../CANopenNode/extra/CO_trace.h
+g431_foc\my_mian.o: ../Core/Inc/fdcan.h
+g431_foc\my_mian.o: ../bspCode/myadc.h
+g431_foc\my_mian.o: ../bspCode/bspUsart.h
+g431_foc\my_mian.o: ../Core/Inc/usart.h
+g431_foc\my_mian.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdio.h
+g431_foc\my_mian.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdarg.h

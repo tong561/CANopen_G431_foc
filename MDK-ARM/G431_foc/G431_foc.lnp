@@ -3,6 +3,7 @@
 "g431_foc\main.o"
 "g431_foc\gpio.o"
 "g431_foc\adc.o"
+"g431_foc\dma.o"
 "g431_foc\fdcan.o"
 "g431_foc\spi.o"
 "g431_foc\tim.o"
@@ -52,12 +53,16 @@
 "g431_foc\crc16-ccitt.o"
 "g431_foc\co_leds.o"
 "g431_foc\co_lssslave.o"
+"g431_foc\od.o"
 "g431_foc\co_app_stm32.o"
 "g431_foc\co_driver_stm32.o"
 "g431_foc\co_storageblank.o"
-"g431_foc\od.o"
 "g431_foc\my_mian.o"
---strict --scatter "G431_foc\G431_foc.sct"
+"g431_foc\foc.o"
+"g431_foc\motor.o"
+"g431_foc\myadc.o"
+"g431_foc\bspusart.o"
+--library_type=microlib --strict --scatter "G431_foc\G431_foc.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list "G431_foc.map" -o G431_foc\G431_foc.axf

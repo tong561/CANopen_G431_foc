@@ -42,9 +42,11 @@ g431_foc\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h
 g431_foc\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h
 g431_foc\main.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
 g431_foc\main.o: ../Core/Inc/adc.h
+g431_foc\main.o: ../Core/Inc/dma.h
 g431_foc\main.o: ../Core/Inc/fdcan.h
 g431_foc\main.o: ../Core/Inc/spi.h
 g431_foc\main.o: ../Core/Inc/tim.h
 g431_foc\main.o: ../Core/Inc/usart.h
 g431_foc\main.o: ../Core/Inc/usb.h
 g431_foc\main.o: ../Core/Inc/gpio.h
+g431_foc\main.o: ../myCode/my_main.h
