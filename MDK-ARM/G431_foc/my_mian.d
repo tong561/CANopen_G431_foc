@@ -76,3 +76,14 @@ g431_foc\my_mian.o: ../bspCode/bspUsart.h
 g431_foc\my_mian.o: ../Core/Inc/usart.h
 g431_foc\my_mian.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdio.h
 g431_foc\my_mian.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdarg.h
+g431_foc\my_mian.o: ..\myCode\MT6816.h
+g431_foc\my_mian.o: ../USB_Device/App/usbd_cdc_if.h
+g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h
+g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
+g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h
+g431_foc\my_mian.o: ../USB_Device/Target/usbd_conf.h
+g431_foc\my_mian.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdlib.h
+g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h
+g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
+g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
+g431_foc\my_mian.o: ../bspCode/bspUSB.h

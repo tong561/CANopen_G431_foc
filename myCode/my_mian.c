@@ -6,6 +6,11 @@
 #include "fdcan.h"
 #include "myadc.h"
 #include "bspUsart.h"
+#include "MT6816.h"
+#include "stdio.h"
+#include "usbd_cdc_if.h"
+#include "bspUSB.h"
+#include <string.h>
 /*************************canopenNode 参数介绍*****************************
 | 成员                | 你要不要配置 | 你的值              | 作用                          
 | ------------------- | ------     | ---------------- | ------------------------           
@@ -47,12 +52,16 @@ void my_main(void)
 		/* ADC1 master 再启动 */
 		HAL_ADCEx_InjectedStart_IT(&hadc1);
 		HAL_TIM_Base_Start(&htim1);
+		uint16_t MT6816_data=0;
     while(1)
     {
-				uart_printf("offset_a=%d,offset_b=%d,adc1_value=%d,adc2_value=%d\r\n",ADC_parm.offset_a,ADC_parm.offset_b,adc1_value,adc2_value);
+				MT6816_data=MT6816_ReadOneAngle();
+				//uart_printf("%d,%d,%d,%d,%d\r\n",ADC_parm.offset_a,ADC_parm.offset_b,adc1_value,adc2_value,MT6816_data);
+				usb_print("%d,%d,%d,%d,%d\r\n",ADC_parm.offset_a,ADC_parm.offset_b,adc1_value,adc2_value,MT6816_data);
+		
 				uart_send_periodic_task(&huart1);
         //canopen_app_process();
-				HAL_Delay(100);
+
     }
 
 }

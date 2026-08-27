@@ -47,6 +47,11 @@ g431_foc\main.o: ../Core/Inc/fdcan.h
 g431_foc\main.o: ../Core/Inc/spi.h
 g431_foc\main.o: ../Core/Inc/tim.h
 g431_foc\main.o: ../Core/Inc/usart.h
-g431_foc\main.o: ../Core/Inc/usb.h
+g431_foc\main.o: ../USB_Device/App/usb_device.h
+g431_foc\main.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h
+g431_foc\main.o: ../USB_Device/Target/usbd_conf.h
+g431_foc\main.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdio.h
+g431_foc\main.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdlib.h
+g431_foc\main.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\string.h
 g431_foc\main.o: ../Core/Inc/gpio.h
 g431_foc\main.o: ../myCode/my_main.h
