@@ -87,3 +87,4 @@ g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_cor
 g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
 g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
 g431_foc\my_mian.o: ../bspCode/bspUSB.h
+g431_foc\my_mian.o: ..\myCode\foc.h
