@@ -544,21 +544,6 @@ uint8_t FOC_PolePairDetect_CurrentProtect(  PPDetect_t *detect,  float ia, float
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #include <math.h>
 #include <stdint.h>
 
@@ -578,8 +563,6 @@ uint8_t FOC_PolePairDetect_CurrentProtect(  PPDetect_t *detect,  float ia, float
 /* 稳定以后取10次平均 */
 #define TEST_SAMPLE_NUM        10U
 #define TEST_SAMPLE_DELAY_MS   5U
-
-
 /* ============================================================
  * 稳定后读取多次MT6816并平均
  *
@@ -664,9 +647,7 @@ void FOC_StablePointTest(void)
      * 16384 / 7
      * = 2340.571 counts
      */
-    expected_delta =
-        (float)MT6816_CPR /
-        (float)MOTOR_POLE_PAIRS;
+    expected_delta =(float)MT6816_CPR /(float)MOTOR_POLE_PAIRS;
 
 
     /* ===========================
@@ -681,10 +662,7 @@ void FOC_StablePointTest(void)
     /*
      * 首先固定在0电角度
      */
-    FOC_SetOpenLoopVector(
-        0.0f,
-        0.2
-    );
+    FOC_SetOpenLoopVector( 0.0f,0.2);
 
 
     /* 等第一次吸合稳定 */
@@ -695,25 +673,15 @@ void FOC_StablePointTest(void)
     raw_last  = raw_start;
 
 
-    usb_print(
-        "\r\n===== Stable Point Test =====\r\n"
-    );
+    usb_print("\r\n===== Stable Point Test =====\r\n" );
 
-    usb_print(
-        "Start Raw=%u\r\n"
-        "ExpectedStep=%.3f\r\n",
-        raw_start,
-        expected_delta
-    );
+    usb_print("Start Raw=%u\r\n" "ExpectedStep=%.3f\r\n",  raw_start,expected_delta);
 
 
     /*
      * CSV标题
      */
-    usb_print(
-        "Point,Turn,Raw,Delta,AbsDelta,"
-        "Error,MechAcc,Ia,Ib,Ic\r\n"
-    );
+    usb_print( "Point,Turn,Raw,Delta,AbsDelta," "Error,MechAcc,Ia,Ib,Ic\r\n" );
 
 
     /* ========================================================
@@ -722,22 +690,16 @@ void FOC_StablePointTest(void)
      * 35 / 7 = 5机械圈
      * ======================================================== */
 
-    for(uint16_t point = 1;
-        point <= TEST_TOTAL_POINTS;
-        point++)
+    for(uint16_t point = 1; point <= TEST_TOTAL_POINTS;point++)
     {
 
         /* ==========================================
          * 完整旋转1个电周期
          * ========================================== */
 
-        for(uint16_t step = 0;
-            step < TEST_ELEC_STEPS;
-            step++)
+        for(uint16_t step = 0;step < TEST_ELEC_STEPS; step++)
         {
-            a +=
-                FOC_2PI /
-                (float)TEST_ELEC_STEPS;
+            a +=  FOC_2PI /(float)TEST_ELEC_STEPS;
 
 
             /*
@@ -749,11 +711,7 @@ void FOC_StablePointTest(void)
             }
 
 
-            FOC_SetOpenLoopVector(
-                a,
-                0.2
-            );
-
+            FOC_SetOpenLoopVector(a,0.2 );
 
             HAL_Delay(TEST_STEP_DELAY_MS);
         }
@@ -779,16 +737,8 @@ void FOC_StablePointTest(void)
          * 计算相邻稳定点机械变化
          * ========================================== */
 
-        delta =
-            Encoder_GetDelta(
-                raw_now,
-                raw_last
-            );
-
-
+        delta = Encoder_GetDelta( raw_now,raw_last );
         mechanical_count_acc += delta;
-
-
         delta_abs = fabsf((float)delta);
 
 
@@ -797,9 +747,7 @@ void FOC_StablePointTest(void)
          *
          * 2340.571 count
          */
-        error =
-            delta_abs -
-            expected_delta;
+        error =delta_abs -expected_delta;
 
 
         error_abs = fabsf(error);
@@ -859,53 +807,34 @@ void FOC_StablePointTest(void)
 
 
     /* 实际机械圈数 */
-    float measured_mech_turns =
-        fabsf(
-            (float)mechanical_count_acc
-        ) /
-        (float)MT6816_CPR;
+    float measured_mech_turns =fabsf((float)mechanical_count_acc) /(float)MT6816_CPR;
 
 
     /*
      * 总共主动运行35个电周期
      */
-    float measured_pole_pairs =
-        (float)TEST_TOTAL_POINTS /
-        measured_mech_turns;
+    float measured_pole_pairs =(float)TEST_TOTAL_POINTS / measured_mech_turns;
 
 
     /*
      * 平均相邻稳定点距离
      */
-    float average_step =
-        step_sum /
-        (float)TEST_TOTAL_POINTS;
+    float average_step =step_sum /(float)TEST_TOTAL_POINTS;
 
 
     /*
      * 平均绝对误差
      */
-    float average_error =
-        error_sum /
-        (float)TEST_TOTAL_POINTS;
+    float average_error = error_sum /(float)TEST_TOTAL_POINTS;
 
 
     /*
      * 五圈以后应该回到原始位置附近
      */
-    int32_t closure_error =
-        Encoder_GetDelta(
-            raw_last,
-            raw_start
-        );
+    int32_t closure_error = Encoder_GetDelta( raw_last, raw_start );
 
 
-    usb_print(
-        "\r\n"
-        "===== RESULT =====\r\n"
-    );
-
-
+    usb_print("\r\n===== RESULT =====\r\n" );
     usb_print(
         "Points=%u\r\n"
         "ExpectedMechTurns=%u\r\n"
@@ -942,7 +871,7 @@ void FOC_StablePointTest(void)
 
 
 
-/********************************************************************
+/******************************电流环**************************************
 */
 float I_alpha = 0.0f;
 float I_beta  = 0.0f;
@@ -953,25 +882,41 @@ float I_q = 0.0f;
 float theta_m = 0.0f;
 float theta_e = 0.0f;
 
-
+uint16_t FOC_encoder_raw;//电机编码器值
+#define FOC_DT 0.00005f	//时间周期50us
+//角度归一化0-360（0-2PI）
 float FOC_WrapAngle(float angle)
 {
     while(angle >= FOC_2PI)
         angle -= FOC_2PI;
-
     while(angle < 0.0f)
         angle += FOC_2PI;
-
     return angle;
 }
 
-uint16_t FOC_encoder_raw;
+
+#define MT6816_LUT_ENABLE  1	//1LUT补偿
+
 void FOC_UpdateElectricalAngle(void)
 {
-     FOC_encoder_raw = MT6816_ReadOneAngle();
+    float encoder_used;
+
+    FOC_encoder_raw = MT6816_ReadOneAngle();
+
+#if MT6816_LUT_ENABLE
+
+    encoder_used =
+        Encoder_GetCorrectedRaw(FOC_encoder_raw);
+
+#else
+
+    encoder_used =
+        (float)FOC_encoder_raw;
+
+#endif
 
     theta_m =
-        (float)FOC_encoder_raw *
+        encoder_used *
         FOC_2PI /
         (float)MT6816_CPR;
 
@@ -984,47 +929,37 @@ void FOC_UpdateElectricalAngle(void)
     theta_e = FOC_WrapAngle(theta_e);
 }
 
-
+//clark变换
 void FOC_Clarke(float Ia, float Ib)
 {
     I_alpha = Ia;
-
-    I_beta =
-        (Ia + 2.0f * Ib)
-        * 0.577350269f;
+    I_beta	 =(Ia + 2.0f * Ib)* 0.5773502f;
 }
 
-
+float s=0,c=0;
+//park变换
 void FOC_Park(float alpha, float beta, float angle)
 {
-    float s = sinf(angle);
-    float c = cosf(angle);
+      s= sinf(angle);
+			c = cosf(angle);
 
-    I_d =
-        alpha * c +
-        beta  * s;
-
-    I_q =
-       -alpha * s +
-        beta  * c;
+    I_d = alpha * c + beta  * s;
+    I_q =-alpha * s + beta  * c;
 }
-void FOC_InvPark(
-    float Vd,
-    float Vq,
-    float theta,
-    float *V_alpha,
-    float *V_beta)
+/*park逆变换
+Vd
+Vq
+theta 电角度
+
+
+*/
+void FOC_InvPark(float Vd, float Vq, float theta,float *V_alpha,float *V_beta)
 {
-    float s = sinf(theta);
-    float c = cosf(theta);
+     s = sinf(theta);
+     c = cosf(theta);
 
-    *V_alpha =
-        Vd * c -
-        Vq * s;
-
-    *V_beta =
-        Vd * s +
-        Vq * c;
+    *V_alpha =Vd * c - Vq * s;
+    *V_beta = Vd * s +Vq * c;
 }
 
 void FOC_SVPWM(float alpha, float beta)
@@ -1049,49 +984,34 @@ void FOC_SVPWM(float alpha, float beta)
      * =============================== */
 
     va = alpha;
-
-    vb = -0.5f * alpha
-         + 0.8660254038f * beta;
-
-    vc = -0.5f * alpha
-         - 0.8660254038f * beta;
-
-
+    vb = -0.5f * alpha+ 0.8660254f * beta;
+    vc = -0.5f * alpha- 0.8660254f * beta;
     /* ===============================
      * 找最大、最小相电压
      * =============================== */
-
     vmax = va;
-
     if(vb > vmax)
         vmax = vb;
-
     if(vc > vmax)
         vmax = vc;
-
-
+		
     vmin = va;
-
     if(vb < vmin)
         vmin = vb;
-
     if(vc < vmin)
         vmin = vc;
-
-
     /* ===============================
      * 零序注入 / SVPWM
      * =============================== */
 
     offset = 0.5f * (vmax + vmin);
-
     va -= offset;
     vb -= offset;
     vc -= offset;
 
 
     /* ===============================
-     * 转换成 0~1 Duty
+     * 转换成 0~1 Duty占空比
      * =============================== */
 
     duty_a = 0.5f + va;
@@ -1110,6 +1030,102 @@ void FOC_SVPWM(float alpha, float beta)
     /* ===============================
      * 更新TIM1 CCR
      * =============================== */
+
+    arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
+
+    __HAL_TIM_SET_COMPARE( &htim1, TIM_CHANNEL_1,(uint32_t)(duty_a * (float)arr) );
+
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_2, (uint32_t)(duty_b * (float)arr));
+
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr)
+    );
+}
+
+/***************************************/
+FOC_PI_t PI_Id =
+{
+    .kp = 0.0008f,
+    .ki = 0.0001f,
+
+    .integral = 0.0f,
+
+    .out_min = -0.40f,
+    .out_max =  0.40f
+};
+
+
+FOC_PI_t PI_Iq =
+{
+    .kp = 0.0012f,
+    .ki = 0.0001f,
+
+    .integral = 0.0f,
+
+    .out_min = -0.40f,
+    .out_max =  0.40f
+};
+float FOC_PI_Run( FOC_PI_t *pi, float target, float feedback, float dt)
+{
+    float error;
+    float output;
+    error = target - feedback;
+    pi->integral +=pi->ki *error *dt;
+    pi->integral = FOC_Limit(pi->integral,pi->out_min,pi->out_max);
+    output =pi->kp * error +pi->integral;
+    output =FOC_Limit(output,pi->out_min,pi->out_max);
+    return output;
+}
+
+float error;
+float FOC_PI_Run1( FOC_PI_t *pi, float target, float feedback, float dt)
+{
+    
+    float output;
+    error = target - feedback;
+    pi->integral +=pi->ki *error *dt;
+    pi->integral = FOC_Limit(pi->integral,pi->out_min,pi->out_max);
+    output =pi->kp * error +pi->integral;
+    output =FOC_Limit(output,pi->out_min,pi->out_max);
+    return output;
+}
+void FOC_SPWM(float alpha, float beta)
+{
+    float va;
+    float vb;
+    float vc;
+
+    float duty_a;
+    float duty_b;
+    float duty_c;
+
+    uint32_t arr;
+
+    /*
+     * alpha/beta -> abc
+     */
+    va = alpha;
+
+    vb = -0.5f * alpha  + 0.8660254038f * beta;
+
+    vc = -0.5f * alpha- 0.8660254038f * beta;
+
+
+    /*
+     * SPWM:
+     * 不做 vmax/vmin 零序注入
+     */
+    duty_a = 0.5f + va;
+    duty_b = 0.5f + vb;
+    duty_c = 0.5f + vc;
+
+
+    /*
+     * 防止超过合法 duty
+     */
+    duty_a = FOC_Limit(duty_a, 0.02f, 0.98f);
+    duty_b = FOC_Limit(duty_b, 0.02f, 0.98f);
+    duty_c = FOC_Limit(duty_c, 0.02f, 0.98f);
+
 
     arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
 
@@ -1132,108 +1148,70 @@ void FOC_SVPWM(float alpha, float beta)
     );
 }
 
-/***************************************/
-FOC_PI_t PI_Id =
+float Vd;
+float Vq;
+float Id_ref = 0.0f;
+float Iq_ref = 400.0f;
+float FOC_CurrentLoop(void)
 {
-    .kp = 0.00020f,
-    .ki = 0.002f,
+    
 
-    .integral = 0.0f,
-
-    .out_min = -0.40f,
-    .out_max =  0.40f
-};
-
-
-FOC_PI_t PI_Iq =
-{
-    .kp = 0.00030f,
-    .ki = 0.004f,
-
-    .integral = 0.0f,
-
-    .out_min = -0.40f,
-    .out_max =  0.40f
-};
-float FOC_PI_Run(
-    FOC_PI_t *pi,
-    float target,
-    float feedback,
-    float dt)
-{
-    float error;
-    float output;
-
-
-    error = target - feedback;
-
-
-    pi->integral +=
-        pi->ki *
-        error *
-        dt;
-
-
-    pi->integral =
-        FOC_Limit(
-            pi->integral,
-            pi->out_min,
-            pi->out_max
-        );
-
-
-    output =
-        pi->kp * error +
-        pi->integral;
-
-
-    output =
-        FOC_Limit(
-            output,
-            pi->out_min,
-            pi->out_max
-        );
-
-
-    return output;
-}
-
-#define FOC_DT 0.00005f
-void FOC_CurrentLoop(void)
-{
-    float Id_ref = 0.0f;
-    float Iq_ref = 1000.0f;
-
-    float Vd;
-    float Vq;
+    
 
     float V_alpha;
     float V_beta;
 
-    Vd = FOC_PI_Run(
-        &PI_Id,
-        Id_ref,
-        I_d,
-        FOC_DT
-    );
+    Vd = FOC_PI_Run(&PI_Id, Id_ref,I_d, FOC_DT);
 
-    Vq = FOC_PI_Run(
-        &PI_Iq,
-        Iq_ref,
-        I_q,
-        FOC_DT
-    );
+    Vq = FOC_PI_Run1( &PI_Iq,Iq_ref,I_q, FOC_DT);
 
-    FOC_InvPark(
-        Vd,
-        Vq,
-        theta_e,
-        &V_alpha,
-        &V_beta
-    );
+    FOC_InvPark(Vd,Vq,theta_e,&V_alpha,&V_beta);
 
-    FOC_SVPWM(
-        V_alpha,
-        V_beta
-    );
+    FOC_SVPWM(V_alpha,V_beta);
+	return Vq;
 }
+
+
+//float FOC_CurrentLoop(void)
+//{
+//    float Id_ref = 0.0f;
+//    float Iq_ref = 100.0f;
+
+//    float Vd;
+//    float Vq;
+
+//    float V_alpha;
+//    float V_beta;
+
+//    /* d轴完全关闭 */
+//    Vd = 0.0f;
+
+//    /* 只测试q轴P控制 */
+//    Vq = PI_Iq.kp * (Iq_ref - I_q);
+
+//    /*
+//     * 先限制得非常小
+//     */
+////    Vq = FOC_Limit(
+////        Vq,
+////        -0.05f,
+////         0.05f
+////    );
+
+//    FOC_InvPark(
+//        Vd,
+//        Vq,
+//        theta_e,
+//        &V_alpha,
+//        &V_beta
+//    );
+
+//    FOC_SVPWM(
+//        V_alpha,
+//        V_beta
+//    );
+//		return Vq;
+
+//}
+
+

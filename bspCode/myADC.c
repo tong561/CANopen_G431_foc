@@ -28,11 +28,11 @@ Uo=RIF
 I=Uo/(R*F)
 其中F为运放增益，Uo为运放输出电压即采样电压，R为采样电阻
 3300/4095=0.80586
+0.80586*2=	1.61172
 */
 void CurrentCalculation(ADC_Type_t *ADC_parm)//电流计算
 {
-	
-	ADC_parm->I_b=(float)ADC_parm->V_a*ADC_parm->buff_Ride_R*0.80586;
-	ADC_parm->I_c=(float)ADC_parm->V_b*ADC_parm->buff_Ride_R*0.80586;
+	ADC_parm->I_b=(float)ADC_parm->V_a*1.61172f;//ADC_parm->buff_Ride_R*0.80586;
+	ADC_parm->I_c=(float)ADC_parm->V_b*1.61172f;//ADC_parm->buff_Ride_R*0.80586;
 	ADC_parm->I_a=-(float)(ADC_parm->I_c+ADC_parm->I_b);
 }

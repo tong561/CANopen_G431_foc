@@ -102,8 +102,10 @@ void FOC_StablePointTest(void);
 
 #define MOTOR_POLE_PAIRS    7.0f
 #define MOTOR_ENCODER_DIR  (-1.0f)
-#define ELECTRICAL_OFFSET   4.9693f
-
+#define ELECTRICAL_OFFSET   4.482676f
+extern float Vd;
+extern float Vq;
+extern float error;
 extern float I_alpha;
 extern float I_beta;
 extern float I_d;
@@ -111,26 +113,16 @@ extern float I_q;
 extern float theta_m;
 extern float theta_e;
 extern uint16_t FOC_encoder_raw;
+extern float Iq_ref;
 float FOC_WrapAngle(float angle);
 void FOC_UpdateElectricalAngle(void);
 void FOC_Clarke(float Ia, float Ib);
 void FOC_Park(float alpha, float beta, float angle);
 void FOC_SVPWM(float alpha, float beta);
-void FOC_SetOpenLoopVector(
-    float electrical_angle,
-    float amplitude
-);
+void FOC_SetOpenLoopVector( float electrical_angle,float amplitude);
 
-void FOC_InvPark(
-    float Vd,
-    float Vq,
-    float theta,
-    float *V_alpha,
-    float *V_beta
-);
-
-		
-		typedef struct
+void FOC_InvPark(float Vd,float Vq,float theta,float *V_alpha,float *V_beta);
+typedef struct
 {
     float kp;
     float ki;
@@ -146,13 +138,7 @@ void FOC_InvPark(
 extern FOC_PI_t PI_Id;
 extern FOC_PI_t PI_Iq;
 
-float FOC_PI_Run(
-    FOC_PI_t *pi,
-    float target,
-    float feedback,
-    float dt
-);
-
-void FOC_CurrentLoop(void);
+float FOC_PI_Run(FOC_PI_t *pi,float target,float feedback,float dt);
+float FOC_CurrentLoop(void);
 
 #endif

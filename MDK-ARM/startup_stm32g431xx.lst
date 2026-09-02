@@ -333,7 +333,7 @@ ARM Macro Assembler    Page 6
   193 00000000                 IMPORT           SystemInit
   194 00000000                 IMPORT           __main
   195 00000000         
-  196 00000000 4806            LDR              R0, =SystemInit
+  196 00000000 4806    1       LDR              R0, =SystemInit
   197 00000002 4780            BLX              R0
   198 00000004 4806            LDR              R0, =__main
   199 00000006 4700            BX               R0
@@ -782,6 +782,14 @@ Symbol: __Vectors_End
 ARM Macro Assembler    Page 1 Alphabetic symbol ordering
 Relocatable symbols
 
+ 00000000
+
+Symbol: 
+   Definitions
+      None
+   Uses
+      None
+Warning:  undefinedComment:  unused
 .text 00000000
 
 Symbol: .text
@@ -833,6 +841,12 @@ Symbol: CORDIC_IRQHandler
       At line 387 in file startup_stm32g431xx.s
    Uses
       At line 181 in file startup_stm32g431xx.s
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
       At line 316 in file startup_stm32g431xx.s
 
 CRS_IRQHandler 0000001A
@@ -841,12 +855,6 @@ Symbol: CRS_IRQHandler
    Definitions
       At line 378 in file startup_stm32g431xx.s
    Uses
-
-
-
-ARM Macro Assembler    Page 2 Alphabetic symbol ordering
-Relocatable symbols
-
       At line 156 in file startup_stm32g431xx.s
       At line 307 in file startup_stm32g431xx.s
 
@@ -898,6 +906,12 @@ Symbol: DMA1_Channel5_IRQHandler
 DMA1_Channel6_IRQHandler 0000001A
 
 Symbol: DMA1_Channel6_IRQHandler
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Relocatable symbols
+
    Definitions
       At line 335 in file startup_stm32g431xx.s
    Uses
@@ -905,12 +919,6 @@ Symbol: DMA1_Channel6_IRQHandler
       At line 264 in file startup_stm32g431xx.s
 
 DMA2_Channel1_IRQHandler 0000001A
-
-
-
-
-ARM Macro Assembler    Page 3 Alphabetic symbol ordering
-Relocatable symbols
 
 Symbol: DMA2_Channel1_IRQHandler
    Definitions
@@ -964,6 +972,12 @@ Symbol: DMA2_Channel6_IRQHandler
       At line 178 in file startup_stm32g431xx.s
       At line 315 in file startup_stm32g431xx.s
 
+
+
+ARM Macro Assembler    Page 4 Alphabetic symbol ordering
+Relocatable symbols
+
+
 DMAMUX_OVR_IRQHandler 0000001A
 
 Symbol: DMAMUX_OVR_IRQHandler
@@ -971,12 +985,6 @@ Symbol: DMAMUX_OVR_IRQHandler
       At line 385 in file startup_stm32g431xx.s
    Uses
       At line 175 in file startup_stm32g431xx.s
-
-
-
-ARM Macro Assembler    Page 4 Alphabetic symbol ordering
-Relocatable symbols
-
       At line 314 in file startup_stm32g431xx.s
 
 DebugMon_Handler 00000014
@@ -1028,6 +1036,12 @@ EXTI2_IRQHandler 0000001A
 Symbol: EXTI2_IRQHandler
    Definitions
       At line 327 in file startup_stm32g431xx.s
+
+
+
+ARM Macro Assembler    Page 5 Alphabetic symbol ordering
+Relocatable symbols
+
    Uses
       At line 89 in file startup_stm32g431xx.s
       At line 256 in file startup_stm32g431xx.s
@@ -1036,12 +1050,6 @@ EXTI3_IRQHandler 0000001A
 
 Symbol: EXTI3_IRQHandler
    Definitions
-
-
-
-ARM Macro Assembler    Page 5 Alphabetic symbol ordering
-Relocatable symbols
-
       At line 328 in file startup_stm32g431xx.s
    Uses
       At line 90 in file startup_stm32g431xx.s
@@ -1094,18 +1102,18 @@ Symbol: FLASH_IRQHandler
 
 FMAC_IRQHandler 0000001A
 
+
+
+ARM Macro Assembler    Page 6 Alphabetic symbol ordering
+Relocatable symbols
+
+
 Symbol: FMAC_IRQHandler
    Definitions
       At line 388 in file startup_stm32g431xx.s
    Uses
       At line 182 in file startup_stm32g431xx.s
       At line 317 in file startup_stm32g431xx.s
-
-
-
-
-ARM Macro Assembler    Page 6 Alphabetic symbol ordering
-Relocatable symbols
 
 FPU_IRQHandler 0000001A
 
@@ -1158,6 +1166,12 @@ Symbol: I2C2_EV_IRQHandler
    Definitions
       At line 351 in file startup_stm32g431xx.s
    Uses
+
+
+
+ARM Macro Assembler    Page 7 Alphabetic symbol ordering
+Relocatable symbols
+
       At line 114 in file startup_stm32g431xx.s
       At line 280 in file startup_stm32g431xx.s
 
@@ -1166,12 +1180,6 @@ I2C3_ER_IRQHandler 0000001A
 Symbol: I2C3_ER_IRQHandler
    Definitions
       At line 384 in file startup_stm32g431xx.s
-
-
-
-ARM Macro Assembler    Page 7 Alphabetic symbol ordering
-Relocatable symbols
-
    Uses
       At line 174 in file startup_stm32g431xx.s
       At line 313 in file startup_stm32g431xx.s
@@ -1223,6 +1231,12 @@ Symbol: NMI_Handler
 
 PVD_PVM_IRQHandler 0000001A
 
+
+
+
+ARM Macro Assembler    Page 8 Alphabetic symbol ordering
+Relocatable symbols
+
 Symbol: PVD_PVM_IRQHandler
    Definitions
       At line 320 in file startup_stm32g431xx.s
@@ -1231,12 +1245,6 @@ Symbol: PVD_PVM_IRQHandler
       At line 249 in file startup_stm32g431xx.s
 
 PendSV_Handler 00000016
-
-
-
-ARM Macro Assembler    Page 8 Alphabetic symbol ordering
-Relocatable symbols
-
 
 Symbol: PendSV_Handler
    Definitions
@@ -1288,6 +1296,12 @@ Symbol: RTC_WKUP_IRQHandler
       At line 322 in file startup_stm32g431xx.s
    Uses
       At line 84 in file startup_stm32g431xx.s
+
+
+
+ARM Macro Assembler    Page 9 Alphabetic symbol ordering
+Relocatable symbols
+
       At line 251 in file startup_stm32g431xx.s
 
 Reset_Handler 00000000
@@ -1296,12 +1310,6 @@ Symbol: Reset_Handler
    Definitions
       At line 191 in file startup_stm32g431xx.s
    Uses
-
-
-
-ARM Macro Assembler    Page 9 Alphabetic symbol ordering
-Relocatable symbols
-
       At line 64 in file startup_stm32g431xx.s
       At line 192 in file startup_stm32g431xx.s
 
@@ -1353,6 +1361,12 @@ Symbol: SVC_Handler
 SysTick_Handler 00000018
 
 Symbol: SysTick_Handler
+
+
+
+ARM Macro Assembler    Page 10 Alphabetic symbol ordering
+Relocatable symbols
+
    Definitions
       At line 241 in file startup_stm32g431xx.s
    Uses
@@ -1360,12 +1374,6 @@ Symbol: SysTick_Handler
       At line 242 in file startup_stm32g431xx.s
 
 TIM1_BRK_TIM15_IRQHandler 0000001A
-
-
-
-
-ARM Macro Assembler    Page 10 Alphabetic symbol ordering
-Relocatable symbols
 
 Symbol: TIM1_BRK_TIM15_IRQHandler
    Definitions
@@ -1419,6 +1427,12 @@ Symbol: TIM3_IRQHandler
       At line 110 in file startup_stm32g431xx.s
       At line 276 in file startup_stm32g431xx.s
 
+
+
+ARM Macro Assembler    Page 11 Alphabetic symbol ordering
+Relocatable symbols
+
+
 TIM4_IRQHandler 0000001A
 
 Symbol: TIM4_IRQHandler
@@ -1426,12 +1440,6 @@ Symbol: TIM4_IRQHandler
       At line 348 in file startup_stm32g431xx.s
    Uses
       At line 111 in file startup_stm32g431xx.s
-
-
-
-ARM Macro Assembler    Page 11 Alphabetic symbol ordering
-Relocatable symbols
-
       At line 277 in file startup_stm32g431xx.s
 
 TIM6_DAC_IRQHandler 0000001A
@@ -1483,6 +1491,12 @@ TIM8_UP_IRQHandler 0000001A
 
 Symbol: TIM8_UP_IRQHandler
    Definitions
+
+
+
+ARM Macro Assembler    Page 12 Alphabetic symbol ordering
+Relocatable symbols
+
       At line 362 in file startup_stm32g431xx.s
    Uses
       At line 125 in file startup_stm32g431xx.s
@@ -1491,12 +1505,6 @@ Symbol: TIM8_UP_IRQHandler
 UART4_IRQHandler 0000001A
 
 Symbol: UART4_IRQHandler
-
-
-
-ARM Macro Assembler    Page 12 Alphabetic symbol ordering
-Relocatable symbols
-
    Definitions
       At line 367 in file startup_stm32g431xx.s
    Uses
@@ -1548,6 +1556,12 @@ Symbol: USBWakeUp_IRQHandler
       At line 123 in file startup_stm32g431xx.s
       At line 289 in file startup_stm32g431xx.s
 
+
+
+
+ARM Macro Assembler    Page 13 Alphabetic symbol ordering
+Relocatable symbols
+
 USB_HP_IRQHandler 0000001A
 
 Symbol: USB_HP_IRQHandler
@@ -1556,12 +1570,6 @@ Symbol: USB_HP_IRQHandler
    Uses
       At line 100 in file startup_stm32g431xx.s
       At line 266 in file startup_stm32g431xx.s
-
-
-
-ARM Macro Assembler    Page 13 Alphabetic symbol ordering
-Relocatable symbols
-
 
 USB_LP_IRQHandler 0000001A
 
@@ -1590,7 +1598,7 @@ Symbol: WWDG_IRQHandler
       At line 81 in file startup_stm32g431xx.s
       At line 248 in file startup_stm32g431xx.s
 
-82 symbols
+83 symbols
 
 
 
@@ -1645,4 +1653,4 @@ Symbol: __main
       At line 198 in file startup_stm32g431xx.s
 Comment: __main used once
 2 symbols
-434 symbols in table
+435 symbols in table
