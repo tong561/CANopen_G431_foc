@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include <stdint.h>
+
 #define DRV8313_ENABLE() GPIOB->ODR|=(0x01<<11)
 #define DRV8313_DISABLE() GPIOB->ODR&=~(0x01<<11)
 /* ================= 测极对数参数 ================= */
@@ -102,7 +103,7 @@ void FOC_StablePointTest(void);
 
 #define MOTOR_POLE_PAIRS    7.0f
 #define MOTOR_ENCODER_DIR  (-1.0f)
-#define ELECTRICAL_OFFSET   4.482676f
+#define ELECTRICAL_OFFSET   5.936242f
 extern float Vd;
 extern float Vq;
 extern float error;
@@ -141,4 +142,30 @@ extern FOC_PI_t PI_Iq;
 float FOC_PI_Run(FOC_PI_t *pi,float target,float feedback,float dt);
 float FOC_CurrentLoop(void);
 
+
+
+
+
+extern volatile float motor_speed_rpm ;
+extern volatile float motor_speed_rpm_filt ;
+extern float error_V;
+void FOC_SpeedCalculate(uint16_t encoder_raw);
+void FOC_POSCalculate(uint16_t encoder_raw);
+float FOC_PosLoop(int64_t pos_ref);
+float FOC_SpeedLoop(float speed_ref);
+
+typedef struct
+{
+    float kp;
+    float ki;
+		float kd;
+    float integral;
+    float out_limit;
+		int64_t pos;
+} POSPI_t;
+
+
+
+
+extern POSPI_t POS_PI;
 #endif

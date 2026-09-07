@@ -173,7 +173,7 @@ void SystemClock_Config(void)
   /** Configures CRS
   */
   pInit.Prescaler = RCC_CRS_SYNC_DIV1;
-  pInit.Source = RCC_CRS_SYNC_SOURCE_USB;
+  pInit.Source = RCC_CRS_SYNC_SOURCE_USB;	
   pInit.Polarity = RCC_CRS_SYNC_POLARITY_RISING;
   pInit.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(48000000,1000);
   pInit.ErrorLimitValue = 34;

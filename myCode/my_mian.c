@@ -13,7 +13,7 @@
 #include <string.h>
 #include "foc.h"
 #include "math.h"
-#define CURRENT_LIMIT_MA   1200.0f
+#define CURRENT_LIMIT_MA   2000.0f
 PPDetect_t PoleDetect;
 volatile uint8_t OverCurrentFlag = 0;
 volatile uint8_t FOC_RunFlag = 0;
@@ -48,11 +48,12 @@ typedef struct	FOC_Pram_type
 {
 	float_to_byte_t	 FOC_encoder_raw;
 	float_to_byte_t  theta_e;
-	float_to_byte_t  current_angle;
 	float_to_byte_t  angle_error;
 	float_to_byte_t  Id;
 	float_to_byte_t  Iq;
-	float_to_byte_t  I_mag;
+	float_to_byte_t		motor_speed_rpm ;
+	float_to_byte_t 	motor_speed_rpm_filt;
+
 	//float_to_byte_t  aaa;
 	char arr[4];
 }FOC_Pram_t;
@@ -61,7 +62,9 @@ uint8_t send_pos=0,save_pos=0,send_flag=0,sendArr_flag=0;
 float a=0;
 float angle_error;
 float current_angle;
-
+int add_Iflag=0;
+char I_flag=0;
+long pos=0;
 void my_main(void)
 {
     canopenNodeSTM32->timerHandle = &htim6;//初始化canopen协议层定时器
@@ -126,22 +129,30 @@ while(1)
 {
 	
 //	FOC_SetOpenLoopVector(a, 0.2f);
+	//usb_print("FOC_encoder_raw=%d,%f \r\n",FOC_encoder_raw,theta_e);
 //	a-=FOC_2PI/51600.0f;
 
 //	if(a>FOC_2PI)
 //		a+=FOC_2PI;
-	if(send_flag&&sendArr_flag==0)
+	if(send_flag&&sendArr_flag==1)
 		{
 			if(usb_flag==0)
 				if(	CDC_Transmit_FS((uint8_t *)&FOC_Pram,sizeof(FOC_Pram)) == USBD_OK)
 					send_flag=0;
 		}
-		else if(send_flag&&sendArr_flag==1)
+		else if(send_flag&&sendArr_flag==0)
 		{
 			if(usb_flag==0)
 				if(	CDC_Transmit_FS((uint8_t *)&FOC_Pram1,sizeof(FOC_Pram1)) == USBD_OK)
 					send_flag=0;
 
+		}
+		
+		if(I_flag)
+		{
+			I_flag=0;
+			
+			pos += 16384*8;
 		}
 //	whil
 //	usb_print("%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%f,%f,%f,%f,%f\r\n",
@@ -183,7 +194,6 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	static uint32_t SUM_A ,SUM_B=10;//求偏置
 	static char InitOverFlag=0;
 	static unsigned char add_i=0;
-	float vq=0;
 
     if (hadc->Instance == ADC1) {
 			
@@ -191,6 +201,10 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 				adc2_value = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
 				/* 读取编码器，计算电角度 */
 				FOC_UpdateElectricalAngle();
+				FOC_SpeedCalculate(FOC_encoder_raw);
+				FOC_POSCalculate(FOC_encoder_raw);
+				//FOC_SpeedLoop(400);
+					FOC_PosLoop(pos);
 				if(!InitOverFlag)
 				{
 					ADC_parm.V_a=adc1_value;
@@ -204,7 +218,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 					// 转换为电流值
 					CurrentCalculation(&ADC_parm);
 					/* ==========================
-             * 300mA 软件过流保护
+             *  软件过流保护
              * ========================== */
 
             if((ADC_parm.I_a >  CURRENT_LIMIT_MA) ||
@@ -233,7 +247,8 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 						
 						if(FOC_RunFlag && !OverCurrentFlag)
 						{
-								vq=FOC_CurrentLoop();
+								
+								FOC_CurrentLoop();
 						}
 						if(sendArr_flag==0)
 						{
@@ -244,15 +259,13 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 							while(angle_error < -FOC_PI)
 									angle_error += FOC_2PI;
 							
-							float I_mag;
-							I_mag = sqrtf(I_alpha * I_alpha + I_beta  * I_beta);
 							FOC_Pram[add_i].FOC_encoder_raw.f	=(float)FOC_encoder_raw;
-							FOC_Pram[add_i].angle_error.f			=Vd;
-							FOC_Pram[add_i].current_angle.f		=ADC_parm.I_a;
-							FOC_Pram[add_i].I_mag.f						=error;
+							FOC_Pram[add_i].angle_error.f			=(float)Iq_ref;
+							FOC_Pram[add_i].motor_speed_rpm.f	=(float)error_V;
+							FOC_Pram[add_i].motor_speed_rpm_filt.f=(float)motor_speed_rpm_filt;
 							FOC_Pram[add_i].Id.f							=I_d;
 							FOC_Pram[add_i].Iq.f							=I_q;
-							FOC_Pram[add_i].theta_e.f					= vq;;
+							FOC_Pram[add_i].theta_e.f					=(float)POS_PI.pos;
 //							while(FOC_Pram[add_i].theta_e.f > FOC_PI)
 //								FOC_Pram[add_i].theta_e.f -= FOC_2PI;
 
@@ -269,16 +282,14 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 									angle_error -= FOC_2PI;
 							while(angle_error < -FOC_PI)
 									angle_error += FOC_2PI;
-							
-							float I_mag;
-							I_mag = sqrtf(I_alpha * I_alpha + I_beta  * I_beta);
+					
 							FOC_Pram1[add_i].FOC_encoder_raw.f	=(float)FOC_encoder_raw;
-							FOC_Pram1[add_i].angle_error.f			=Vd;
-							FOC_Pram1[add_i].current_angle.f		=ADC_parm.I_a;
-							FOC_Pram1[add_i].I_mag.f						=error;
+							FOC_Pram1[add_i].angle_error.f			=(float)Iq_ref;
+							FOC_Pram1[add_i].motor_speed_rpm.f	=(float)error_V;
+							FOC_Pram1[add_i].motor_speed_rpm_filt.f=(float)motor_speed_rpm_filt;
 							FOC_Pram1[add_i].Id.f							=	I_d;
 							FOC_Pram1[add_i].Iq.f							=I_q;
-							FOC_Pram1[add_i].theta_e.f					= vq;;
+							FOC_Pram1[add_i].theta_e.f					=(float) POS_PI.pos;
 //							while(FOC_Pram1[add_i].theta_e.f > FOC_PI)
 //								FOC_Pram1[add_i].theta_e.f -= FOC_2PI;
 
@@ -290,6 +301,12 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 						add_i++;
 						if(add_i>=254)
 						{
+							add_Iflag++;
+							if(add_Iflag>=200)
+							{
+								I_flag=1;
+								add_Iflag=0;
+							}
 							send_flag=1;
 							sendArr_flag=!sendArr_flag;
 							add_i=0;

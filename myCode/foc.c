@@ -138,54 +138,6 @@ void FOC_SetOpenLoopVector(float electrical_angle, float amplitude)
     alpha = amplitude * cosf(electrical_angle);
     beta  = amplitude * sinf(electrical_angle);
 		FOC_SVPWM( alpha, beta );
-//    /*
-//     * αβ -> abc clarke 变换
-//     */
-//    va = alpha;
-//    vb = -0.5f * alpha +	0.86602540378f * beta;
-//    vc = -0.5f * alpha - 0.86602540378f * beta;
-//    /*
-//     * SVPWM 零序分量注入
-//     */
-//    vmax = va;
-//    if(vb > vmax)
-//        vmax = vb;
-//    if(vc > vmax)
-//        vmax = vc;
-
-
-//    vmin = va;
-
-//    if(vb < vmin)
-//        vmin = vb;
-//    if(vc < vmin)
-//        vmin = vc;
-
-//    offset = 0.5f * (vmax + vmin);
-
-
-//    va -= offset;
-//    vb -= offset;
-//    vc -= offset;
-
-
-//    /*
-//     * 转换成 0~1 Duty(占空比)
-//     */
-//    duty_a = 0.5f + va;
-//    duty_b = 0.5f + vb;
-//    duty_c = 0.5f + vc;
-
-//    
-//    arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
-
-//    __HAL_TIM_SET_COMPARE( &htim1, TIM_CHANNEL_1, (uint32_t)(duty_a * (float)arr));
-
-
-//    __HAL_TIM_SET_COMPARE( &htim1, TIM_CHANNEL_2,(uint32_t)(duty_b * (float)arr));
-
-
-//    __HAL_TIM_SET_COMPARE( &htim1, TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr));
 }
 
 
@@ -212,11 +164,7 @@ void FOC_PolePairDetect_Start(PPDetect_t *detect)
     /*
      * 先建立 θe = 0 的弱磁场。
      */
-    FOC_SetOpenLoopVector(
-        0.0f,
-        PP_DETECT_PWM_AMPLITUDE);
-
-
+    FOC_SetOpenLoopVector( 0.0f,  PP_DETECT_PWM_AMPLITUDE);
     FOC_PWM_Start();
 }
 
@@ -592,9 +540,7 @@ static uint16_t Encoder_ReadAverage(void)
     }
 
 
-    average_raw =
-        (int32_t)base +
-        delta_sum / TEST_SAMPLE_NUM;
+    average_raw = (int32_t)base + delta_sum / TEST_SAMPLE_NUM;
 
 
     /* 处理0~16383范围 */
@@ -869,6 +815,88 @@ void FOC_StablePointTest(void)
     );
 }
 
+void FOC_FindElectricalOffset(void)
+{
+    uint16_t raw;
+    float corrected_raw;
+    float mech_angle;
+    float elec_without_offset;
+    float offset;
+
+    DRV8313_ENABLE();
+    FOC_PWM_Start();
+
+    /*
+     * 定子磁场固定在电角度 0
+     */
+    FOC_SetOpenLoopVector(0.0f, 0.20f);
+
+    /*
+     * 等待转子吸合
+     */
+    HAL_Delay(1500);
+
+    /*
+     * 读取编码器
+     */
+    raw = MT6816_ReadOneAngle();
+
+#if MT6816_LUT_ENABLE
+    corrected_raw = Encoder_GetCorrectedRaw(raw);
+#else
+    corrected_raw = (float)raw;
+#endif
+
+    /*
+     * 机械角
+     */
+    mech_angle =
+        corrected_raw
+        * FOC_2PI
+        / (float)MT6816_CPR;
+
+    /*
+     * 不带 offset 的电角度
+     */
+    elec_without_offset =
+        MOTOR_ENCODER_DIR
+        * MOTOR_POLE_PAIRS
+        * mech_angle;
+
+    elec_without_offset =
+        FOC_WrapAngle(elec_without_offset);
+
+    /*
+     * 因为现在人为规定定子电角度 = 0
+     *
+     * 0 = elec_without_offset + offset
+     */
+    offset =
+        FOC_WrapAngle(-elec_without_offset);
+
+    usb_print(
+        "\r\n===== Electrical Offset =====\r\n"
+        "Raw=%u\r\n"
+        "CorrectedRaw=%.3f\r\n"
+        "ThetaM=%.6f rad\r\n"
+        "ThetaM=%.3f deg\r\n"
+        "ElecNoOffset=%.6f rad\r\n"
+        "ElecNoOffset=%.3f deg\r\n"
+        "OFFSET=%.6f rad\r\n"
+        "OFFSET=%.3f deg\r\n",
+        raw,
+        corrected_raw,
+        mech_angle,
+        mech_angle * 180.0f / 3.14159265359f,
+        elec_without_offset,
+        elec_without_offset * 180.0f / 3.14159265359f,
+        offset,
+        offset * 180.0f / 3.14159265359f
+    );
+
+    FOC_PWM_Stop();
+    DRV8313_DISABLE();
+}
 
 
 /******************************电流环**************************************
@@ -915,16 +943,9 @@ void FOC_UpdateElectricalAngle(void)
 
 #endif
 
-    theta_m =
-        encoder_used *
-        FOC_2PI /
-        (float)MT6816_CPR;
+    theta_m =encoder_used *FOC_2PI /(float)MT6816_CPR;
 
-    theta_e =
-        MOTOR_ENCODER_DIR *
-        MOTOR_POLE_PAIRS *
-        theta_m +
-        ELECTRICAL_OFFSET;
+    theta_e = MOTOR_ENCODER_DIR * MOTOR_POLE_PAIRS *theta_m + ELECTRICAL_OFFSET;
 
     theta_e = FOC_WrapAngle(theta_e);
 }
@@ -1044,8 +1065,8 @@ void FOC_SVPWM(float alpha, float beta)
 /***************************************/
 FOC_PI_t PI_Id =
 {
-    .kp = 0.0008f,
-    .ki = 0.0001f,
+    .kp = 0.000157f,
+    .ki = 0.958f,
 
     .integral = 0.0f,
 
@@ -1056,8 +1077,8 @@ FOC_PI_t PI_Id =
 
 FOC_PI_t PI_Iq =
 {
-    .kp = 0.0012f,
-    .ki = 0.0001f,
+    .kp = 0.000157f,
+    .ki = 0.958f,
 
     .integral = 0.0f,
 
@@ -1151,7 +1172,7 @@ void FOC_SPWM(float alpha, float beta)
 float Vd;
 float Vq;
 float Id_ref = 0.0f;
-float Iq_ref = 400.0f;
+float Iq_ref = 000.0f;
 float FOC_CurrentLoop(void)
 {
     
@@ -1170,6 +1191,7 @@ float FOC_CurrentLoop(void)
     FOC_SVPWM(V_alpha,V_beta);
 	return Vq;
 }
+
 
 
 //float FOC_CurrentLoop(void)
@@ -1213,5 +1235,183 @@ float FOC_CurrentLoop(void)
 //		return Vq;
 
 //}
+//速度环
+#define ENCODER_CPR    16384
+#define SPEED_DT       0.00005f       //50us
+
+volatile float motor_speed_rpm = 0.0f;
+volatile float motor_speed_rpm_filt = 0.0f;
+
+void FOC_SpeedCalculate(uint16_t encoder_raw)
+{
+    static uint16_t last_raw = 0;
+    static uint8_t first = 1;
+
+    int32_t delta;
+
+    if(first)
+    {
+        last_raw = encoder_raw;
+        first = 0;
+        return;
+    }
+
+    delta = (int32_t)encoder_raw -
+            (int32_t)last_raw;
+
+    last_raw = encoder_raw;
+
+    /* 处理跨零 */
+    if(delta > ENCODER_CPR / 2)
+        delta -= ENCODER_CPR;
+
+    if(delta < -(ENCODER_CPR / 2))
+        delta += ENCODER_CPR;
+
+    /*
+     * rpm =
+     * delta / CPR / dt * 60
+     */
+    motor_speed_rpm = (float)delta *60.0f /((float)ENCODER_CPR * SPEED_DT);
+
+    /* 简单低通 */
+    motor_speed_rpm_filt +=
+        0.1f *
+        (motor_speed_rpm -
+         motor_speed_rpm_filt);
+}
+
+typedef struct
+{
+    float kp;
+    float ki;
+		float kd;
+    float integral;
+    float out_limit;
+} SpeedPI_t;
+
+SpeedPI_t Speed_PI = {
+    .kp = 1.8f,
+    .ki = 0.0006f,
+		.kd =0,// 6.1f,
+    .integral = 0.0f,
+    .out_limit = 1500.0f
+};
+float error_V=0.0f;
+float last_error_V=0.0f;
+float last_error_V2=0.0f;
+float FOC_SpeedLoop(float speed_ref)
+{
+   
+    float iq_ref;
+
+    error_V = -(speed_ref - motor_speed_rpm_filt);			//期望-实际=error
+
+    iq_ref=Speed_PI.kp * (error_V-last_error_V)+Speed_PI.ki*error_V+
+					 Speed_PI.kd	*	(error_V-2*last_error_V+last_error_V2);
+		Iq_ref +=iq_ref;
+    if(Iq_ref > Speed_PI.out_limit)
+        Iq_ref = Speed_PI.out_limit;
+
+    if(Iq_ref < -Speed_PI.out_limit)
+        Iq_ref = -Speed_PI.out_limit;
+		last_error_V2=last_error_V;
+		last_error_V=error_V;
+		
+    return Iq_ref;
+}
+
+//typedef struct
+//{
+//    float kp;
+//    float ki;
+//		float kd;
+//    float integral;
+//    float out_limit;
+//		long pos;
+//} POSPI_t;
 
 
+
+
+POSPI_t POS_PI = {
+    .kp = 0.15f,
+    .ki = 0.00055f,
+		.kd = 0.0f,
+    .integral = 0.0f,
+    .out_limit = 1000.0f,
+		.pos=0
+};
+
+
+void FOC_POSCalculate(uint16_t encoder_raw)
+{
+    static uint16_t last_raw = 0;
+    static uint8_t first = 1;
+
+    int32_t delta;
+
+    if(first)
+    {
+        last_raw = encoder_raw;
+        first = 0;
+        return;
+    }
+
+    delta =
+        (int32_t)encoder_raw -
+        (int32_t)last_raw;
+
+    /*
+     * 正转跨零：
+     * 16380 -> 3
+     * 原始 delta = -16377
+     * 修正后 delta = +7
+     */
+    if(delta < -(ENCODER_CPR / 2))
+    {
+        delta += ENCODER_CPR;
+    }
+
+    /*
+     * 反转跨零：
+     * 3 -> 16380
+     * 原始 delta = +16377
+     * 修正后 delta = -7
+     */
+    else if(delta > (ENCODER_CPR / 2))
+    {
+        delta -= ENCODER_CPR;
+    }
+
+    POS_PI.pos += delta;
+
+    last_raw = encoder_raw;
+}
+
+float error_pos=0.0f;
+float FOC_PosLoop(int64_t pos_ref)
+{
+   
+    float speed_ref;
+
+    error_pos = (pos_ref-POS_PI.pos );			//期望-实际=error
+		POS_PI.integral+=error_pos*SPEED_DT;
+		if(POS_PI.integral>1500)
+		{
+			POS_PI.integral=1500;
+		}
+		else	if(POS_PI.integral<-1500)
+		{
+			POS_PI.integral=-1500;
+		}
+    speed_ref=POS_PI.kp * error_pos+POS_PI.ki * POS_PI.integral;
+	
+    if(speed_ref > POS_PI.out_limit)
+        speed_ref = POS_PI.out_limit;
+
+    if(speed_ref < -POS_PI.out_limit)
+        speed_ref = -POS_PI.out_limit;
+		
+   return FOC_SpeedLoop( speed_ref);
+}
