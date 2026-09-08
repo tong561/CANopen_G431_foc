@@ -46,15 +46,15 @@ typedef union u16_to_byte
 
 typedef struct	FOC_Pram_type
 {
-	float_to_byte_t	 FOC_encoder_raw;
-	float_to_byte_t  theta_e;
-	float_to_byte_t  angle_error;
-	float_to_byte_t  Id;
-	float_to_byte_t  Iq;
-	float_to_byte_t		motor_speed_rpm ;
-	float_to_byte_t 	motor_speed_rpm_filt;
-
-	//float_to_byte_t  aaa;
+	float_to_byte_t	 ch0;
+	float_to_byte_t	 ch1;
+	float_to_byte_t  ch2;
+	float_to_byte_t  ch3;
+	float_to_byte_t  ch4;
+	float_to_byte_t  ch5;
+	float_to_byte_t  ch6;
+	float_to_byte_t  ch7;
+	float_to_byte_t  ch8;
 	char arr[4];
 }FOC_Pram_t;
 FOC_Pram_t FOC_Pram[254],FOC_Pram1[254];
@@ -193,7 +193,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	static uint32_t SUM_A ,SUM_B=10;//ÇóÆ«ÖÃ
 	static char InitOverFlag=0;
-	static unsigned char add_i=0;
+	static unsigned char add_i,save_flag=0;
 
     if (hadc->Instance == ADC1) {
 			
@@ -250,59 +250,43 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 								
 								FOC_CurrentLoop();
 						}
-						if(sendArr_flag==0)
+						save_flag=!save_flag;
+						if(sendArr_flag==0&&save_flag)
 						{
-							current_angle = atan2f(I_beta, I_alpha);
-							angle_error = current_angle - theta_e;
-							while(angle_error > FOC_PI)
-									angle_error -= FOC_2PI;
-							while(angle_error < -FOC_PI)
-									angle_error += FOC_2PI;
-							
-							FOC_Pram[add_i].FOC_encoder_raw.f	=(float)FOC_encoder_raw;
-							FOC_Pram[add_i].angle_error.f			=(float)Iq_ref;
-							FOC_Pram[add_i].motor_speed_rpm.f	=(float)error_V;
-							FOC_Pram[add_i].motor_speed_rpm_filt.f=(float)motor_speed_rpm_filt;
-							FOC_Pram[add_i].Id.f							=I_d;
-							FOC_Pram[add_i].Iq.f							=I_q;
-							FOC_Pram[add_i].theta_e.f					=(float)POS_PI.pos;
-//							while(FOC_Pram[add_i].theta_e.f > FOC_PI)
-//								FOC_Pram[add_i].theta_e.f -= FOC_2PI;
-
-//							while(FOC_Pram[add_i].theta_e.f < -FOC_PI)
-//								FOC_Pram[add_i].theta_e.f += FOC_2PI;
+							FOC_Pram[add_i].ch0.f	=(float)FOC_encoder_raw;
+							FOC_Pram[add_i].ch1.f	=(float)Iq_ref;
+							FOC_Pram[add_i].ch2.f	=(float)error_V;
+							FOC_Pram[add_i].ch3.f	=(float)motor_speed_rpm_filt;
+							FOC_Pram[add_i].ch4.f	=I_d;
+							FOC_Pram[add_i].ch5.f	=I_q;
+							FOC_Pram[add_i].ch6.f	=Vd;
+							FOC_Pram[add_i].ch7.f	=Vq;
+							FOC_Pram[add_i].ch8.f	=(float)POS_PI.pos;
 							FOC_Pram[add_i].arr[2]=0x80;
 							FOC_Pram[add_i].arr[3]=0x7f;
+							add_i++;
 						}
-						else 
+						else if(save_flag)
 						{
-							current_angle = atan2f(I_beta, I_alpha);
-							angle_error = current_angle - theta_e;
-							while(angle_error > FOC_PI)
-									angle_error -= FOC_2PI;
-							while(angle_error < -FOC_PI)
-									angle_error += FOC_2PI;
-					
-							FOC_Pram1[add_i].FOC_encoder_raw.f	=(float)FOC_encoder_raw;
-							FOC_Pram1[add_i].angle_error.f			=(float)Iq_ref;
-							FOC_Pram1[add_i].motor_speed_rpm.f	=(float)error_V;
-							FOC_Pram1[add_i].motor_speed_rpm_filt.f=(float)motor_speed_rpm_filt;
-							FOC_Pram1[add_i].Id.f							=	I_d;
-							FOC_Pram1[add_i].Iq.f							=I_q;
-							FOC_Pram1[add_i].theta_e.f					=(float) POS_PI.pos;
-//							while(FOC_Pram1[add_i].theta_e.f > FOC_PI)
-//								FOC_Pram1[add_i].theta_e.f -= FOC_2PI;
-
-//							while(FOC_Pram1[add_i].theta_e.f < -FOC_PI)
-//								FOC_Pram1[add_i].theta_e.f += FOC_2PI;
+							
+							FOC_Pram1[add_i].ch0.f	=(float)FOC_encoder_raw;
+							FOC_Pram1[add_i].ch1.f	=(float)Iq_ref;
+							FOC_Pram1[add_i].ch2.f	=(float)error_V;
+							FOC_Pram1[add_i].ch3.f	=(float)motor_speed_rpm_filt;
+							FOC_Pram1[add_i].ch4.f	=I_d;
+							FOC_Pram1[add_i].ch5.f	=I_q;
+							FOC_Pram1[add_i].ch6.f	=Vd;
+							FOC_Pram1[add_i].ch7.f	=Vq;
+							FOC_Pram1[add_i].ch8.f	=(float)POS_PI.pos;
 							FOC_Pram1[add_i].arr[2]=0x80;
 							FOC_Pram1[add_i].arr[3]=0x7f;
+							add_i++;
 						}
-						add_i++;
+						
 						if(add_i>=254)
 						{
 							add_Iflag++;
-							if(add_Iflag>=200)
+							if(add_Iflag>=30)
 							{
 								I_flag=1;
 								add_Iflag=0;

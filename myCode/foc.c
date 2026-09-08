@@ -923,7 +923,7 @@ float FOC_WrapAngle(float angle)
 }
 
 
-#define MT6816_LUT_ENABLE  1	//1LUT补偿
+#define MT6816_LUT_ENABLE  0	//1LUT补偿
 
 void FOC_UpdateElectricalAngle(void)
 {
@@ -1335,11 +1335,11 @@ float FOC_SpeedLoop(float speed_ref)
 
 
 POSPI_t POS_PI = {
-    .kp = 0.15f,
+    .kp = 0.14f,
     .ki = 0.00055f,
 		.kd = 0.0f,
     .integral = 0.0f,
-    .out_limit = 1000.0f,
+    .out_limit =2100.0f,
 		.pos=0
 };
 
@@ -1390,6 +1390,7 @@ void FOC_POSCalculate(uint16_t encoder_raw)
 }
 
 float error_pos=0.0f;
+
 float FOC_PosLoop(int64_t pos_ref)
 {
    
@@ -1397,13 +1398,13 @@ float FOC_PosLoop(int64_t pos_ref)
 
     error_pos = (pos_ref-POS_PI.pos );			//期望-实际=error
 		POS_PI.integral+=error_pos*SPEED_DT;
-		if(POS_PI.integral>1500)
+		if(POS_PI.integral>1400)
 		{
-			POS_PI.integral=1500;
+			POS_PI.integral=1400;
 		}
-		else	if(POS_PI.integral<-1500)
+		else	if(POS_PI.integral<-1400)
 		{
-			POS_PI.integral=-1500;
+			POS_PI.integral=-1400;
 		}
     speed_ref=POS_PI.kp * error_pos+POS_PI.ki * POS_PI.integral;
 	
