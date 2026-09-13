@@ -72,10 +72,10 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  SCB->VTOR = 0x08000000;//BOOT0û����Ҫ�����λ�ж�������
-    __DSB();
-    __ISB();
-    __enable_irq();
+//  SCB->VTOR = 0x08000000;//BOOT0û����Ҫ�����λ�ж�������
+//    __DSB();
+//    __ISB();
+//    __enable_irq();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -152,6 +152,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -173,7 +174,7 @@ void SystemClock_Config(void)
   /** Configures CRS
   */
   pInit.Prescaler = RCC_CRS_SYNC_DIV1;
-  pInit.Source = RCC_CRS_SYNC_SOURCE_USB;	
+  pInit.Source = RCC_CRS_SYNC_SOURCE_USB;
   pInit.Polarity = RCC_CRS_SYNC_POLARITY_RISING;
   pInit.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(48000000,1000);
   pInit.ErrorLimitValue = 34;

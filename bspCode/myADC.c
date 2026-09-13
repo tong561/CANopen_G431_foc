@@ -7,6 +7,7 @@ ADC_Type_t ADC_parm;
 unsigned char ADC_Init(ADC_Type_t *ADC_parm)//初始化偏置电流
 {
 	static uint16_t add_i=0;
+	//50倍增益，10m欧
 	ADC_parm->buff_Ride_R=2;//50*10; a/500*1000=a*2
 	
 	static uint64_t sum_a=0,sum_b=0;
@@ -32,7 +33,7 @@ I=Uo/(R*F)
 */
 void CurrentCalculation(ADC_Type_t *ADC_parm)//电流计算
 {
-	ADC_parm->I_b=(float)ADC_parm->V_a*1.61172f;//ADC_parm->buff_Ride_R*0.80586;
-	ADC_parm->I_c=(float)ADC_parm->V_b*1.61172f;//ADC_parm->buff_Ride_R*0.80586;
-	ADC_parm->I_a=-(float)(ADC_parm->I_c+ADC_parm->I_b);
+	ADC_parm->I_a=(float)ADC_parm->V_a*0.80586f;//1.61172f*2;//ADC_parm->buff_Ride_R*0.80586;
+	ADC_parm->I_b=(float)ADC_parm->V_b*0.80586f;//1.61172f*2;//ADC_parm->buff_Ride_R*0.80586;
+	ADC_parm->I_c=-(float)(ADC_parm->I_a+ADC_parm->I_b);
 }

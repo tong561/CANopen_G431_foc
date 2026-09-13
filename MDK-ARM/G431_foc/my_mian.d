@@ -89,3 +89,4 @@ g431_foc\my_mian.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctl
 g431_foc\my_mian.o: ../bspCode/bspUSB.h
 g431_foc\my_mian.o: ..\myCode\foc.h
 g431_foc\my_mian.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\math.h
+g431_foc\my_mian.o: ..\myCode\CPU_load.h

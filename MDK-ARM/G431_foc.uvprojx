@@ -751,51 +751,6 @@
           <GroupName>ObjectDictionary</GroupName>
         </Group>
         <Group>
-          <GroupName>myCode</GroupName>
-          <Files>
-            <File>
-              <FileName>my_mian.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\myCode\my_mian.c</FilePath>
-            </File>
-            <File>
-              <FileName>foc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\myCode\foc.c</FilePath>
-            </File>
-            <File>
-              <FileName>motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\myCode\motor.c</FilePath>
-            </File>
-            <File>
-              <FileName>MT6816.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\myCode\MT6816.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>bspCode</GroupName>
-          <Files>
-            <File>
-              <FileName>myADC.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\bspCode\myADC.c</FilePath>
-            </File>
-            <File>
-              <FileName>bspUsart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\bspCode\bspUsart.c</FilePath>
-            </File>
-            <File>
-              <FileName>bspUSB.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\bspCode\bspUSB.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>Application/User/USB_Device/Target</GroupName>
           <GroupOption>
             <CommonProperty>
@@ -1462,6 +1417,56 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>bspCode</GroupName>
+          <Files>
+            <File>
+              <FileName>myADC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\bspCode\myADC.c</FilePath>
+            </File>
+            <File>
+              <FileName>bspUsart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\bspCode\bspUsart.c</FilePath>
+            </File>
+            <File>
+              <FileName>bspUSB.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\bspCode\bspUSB.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>myCode</GroupName>
+          <Files>
+            <File>
+              <FileName>my_mian.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myCode\my_mian.c</FilePath>
+            </File>
+            <File>
+              <FileName>foc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myCode\foc.c</FilePath>
+            </File>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myCode\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>MT6816.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myCode\MT6816.c</FilePath>
+            </File>
+            <File>
+              <FileName>CPU_load.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\myCode\CPU_load.c</FilePath>
             </File>
           </Files>
         </Group>

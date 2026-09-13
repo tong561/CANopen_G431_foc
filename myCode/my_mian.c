@@ -13,6 +13,7 @@
 #include <string.h>
 #include "foc.h"
 #include "math.h"
+#include "CPU_load.h"
 #define CURRENT_LIMIT_MA   2000.0f
 PPDetect_t PoleDetect;
 volatile uint8_t OverCurrentFlag = 0;
@@ -55,9 +56,10 @@ typedef struct	FOC_Pram_type
 	float_to_byte_t  ch6;
 	float_to_byte_t  ch7;
 	float_to_byte_t  ch8;
+	float_to_byte_t  ch9;
 	char arr[4];
 }FOC_Pram_t;
-FOC_Pram_t FOC_Pram[254],FOC_Pram1[254];
+FOC_Pram_t FOC_Pram[200],FOC_Pram1[200];
 uint8_t send_pos=0,save_pos=0,send_flag=0,sendArr_flag=0;
 float a=0;
 float angle_error;
@@ -73,22 +75,23 @@ void my_main(void)
     canopenNodeSTM32->desiredNodeID = 0x01;//设置canopen协议层期望节点ID为0x01
     canopenNodeSTM32->baudrate = 500;//设置canopen协议层波特率为500Kbps
     //canopen_app_init(canopenNodeSTM32);//初始化canopen协议层
+		HAL_TIM_Base_Start_IT(canopenNodeSTM32->timerHandle);
+	
 		/* ADC校准，只需要初始化时做一次 */
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+		HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
 		uart_printf("usart1 is OK!\r\n");
 		//uart_send_periodic_task(&huart1);
 		uart_printf("offset_a=%d,offset_b=%d\r\n",ADC_parm.offset_a,ADC_parm.offset_b);
 		uart_send_periodic_task(&huart1);
 		HAL_Delay(1);
-		HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
-		HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
-
 		/* ADC2 slave 先启动 */
 		HAL_ADCEx_InjectedStart_IT(&hadc2);
-
 		/* ADC1 master 再启动 */
 		HAL_ADCEx_InjectedStart_IT(&hadc1);
-		HAL_TIM_Base_Start(&htim1);
+		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+	
+		
 		uint16_t MT6816_data=0;
 		
 		DRV8313_DISABLE();
@@ -114,7 +117,7 @@ void my_main(void)
 		FOC_PWM_Start();//开PWM
 		DRV8313_ENABLE();//最后开驱动
 
-		FOC_RunFlag = 1;//允许闭环
+		FOC_RunFlag = 0;//允许闭环
 		uint8_t result_printed = 0;
 		uint16_t angle = MT6816_ReadOneAngle();
 		usb_print("angle=%u\r\n", angle);
@@ -128,6 +131,7 @@ char usb_flag=0;
 while(1)
 {
 	
+	 NumberOfPolePairs_Check();
 //	FOC_SetOpenLoopVector(a, 0.2f);
 	//usb_print("FOC_encoder_raw=%d,%f \r\n",FOC_encoder_raw,theta_e);
 //	a-=FOC_2PI/51600.0f;
@@ -183,9 +187,29 @@ while(1)
 /*******************************中断回调部分************************************************/
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if(htim->Instance == canopenNodeSTM32->timerHandle->Instance)//1ms定时中断，canopen协议层用
+	static uint16_t add_i=0;
+    if(htim== &htim6)//1ms定时中断，canopen协议层用
     {
+			FOC_SpeedCalculate(POS_PI.pos);
+			add_i++;
+			if(add_i>1000)
+			{
+				FOC_SpeedLoop(-2000);
+				if(add_i>2000)
+					add_i=0;
+			}
+			else
+			{
+				FOC_SpeedLoop(2000);
+			}
       // canopen_app_interrupt();
+			
+			
+			
+			//FOC_PosLoop(pos);
+			
+			
+			
     }
 }
 
@@ -194,17 +218,18 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	static uint32_t SUM_A ,SUM_B=10;//求偏置
 	static char InitOverFlag=0;
 	static unsigned char add_i,save_flag=0;
-
+	uint32_t start_CPU_CYC=0;
     if (hadc->Instance == ADC1) {
-			
+				CPU_CycleCounter_Init();
+				start_CPU_CYC=DWT->CYCCNT;
 				adc1_value = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
 				adc2_value = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
 				/* 读取编码器，计算电角度 */
 				FOC_UpdateElectricalAngle();
-				FOC_SpeedCalculate(FOC_encoder_raw);
 				FOC_POSCalculate(FOC_encoder_raw);
+				RUN_CYC=DWT->CYCCNT-start_CPU_CYC;
 				//FOC_SpeedLoop(400);
-					FOC_PosLoop(pos);
+					
 				if(!InitOverFlag)
 				{
 					ADC_parm.V_a=adc1_value;
@@ -262,6 +287,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 							FOC_Pram[add_i].ch6.f	=Vd;
 							FOC_Pram[add_i].ch7.f	=Vq;
 							FOC_Pram[add_i].ch8.f	=(float)POS_PI.pos;
+							FOC_Pram[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;
 							FOC_Pram[add_i].arr[2]=0x80;
 							FOC_Pram[add_i].arr[3]=0x7f;
 							add_i++;
@@ -278,15 +304,16 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 							FOC_Pram1[add_i].ch6.f	=Vd;
 							FOC_Pram1[add_i].ch7.f	=Vq;
 							FOC_Pram1[add_i].ch8.f	=(float)POS_PI.pos;
+							FOC_Pram1[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;
 							FOC_Pram1[add_i].arr[2]=0x80;
 							FOC_Pram1[add_i].arr[3]=0x7f;
 							add_i++;
 						}
 						
-						if(add_i>=254)
+						if(add_i>=200)
 						{
 							add_Iflag++;
-							if(add_Iflag>=30)
+							if(add_Iflag>=350)
 							{
 								I_flag=1;
 								add_Iflag=0;
@@ -296,6 +323,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 							add_i=0;
 						}
 				}
+				
     }
 }
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)

@@ -140,6 +140,36 @@ void FOC_SetOpenLoopVector(float electrical_angle, float amplitude)
 		FOC_SVPWM( alpha, beta );
 }
 
+/*
+极对数检测
+
+*/
+
+#define LAPS_NUMBLE	10
+void NumberOfPolePairs_Check()
+{
+	float a=0; //旋转角
+	static long start_pos=0;
+	FOC_SetOpenLoopVector(a,0.2);//转子先吸合1s;
+	HAL_Delay(1000);
+	start_pos =POS_PI.pos;
+	for(unsigned int i=0;i<360*LAPS_NUMBLE;i++)
+	{
+		a+=FOC_2PI/360;
+		if(a>FOC_2PI)
+			a-=FOC_2PI;
+		FOC_SetOpenLoopVector(a,0.1);//转子先吸合1s
+		HAL_Delay(1);
+		usb_print("Electrical angle:%f,%f,%f,%f,%f%%\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,(float)i*100/(360*LAPS_NUMBLE));
+	}
+	HAL_Delay(1000);
+	usb_print("Electrical angle:%f,%f,%f,%f,%f%%,%f\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,100,(float)LAPS_NUMBLE/((float)(POS_PI.pos-start_pos)/MT6816_CPR));
+	HAL_Delay(1000);
+}
+
+
+
+
 
 /* =========================================================
  * 开始检测
@@ -178,25 +208,15 @@ void FOC_PolePairDetect_Start(PPDetect_t *detect)
 void FOC_PolePairDetect_Task(PPDetect_t *detect)
 {
     uint32_t now;
-
     uint16_t encoder;
-
     int32_t delta;
-
     int32_t mechanical_abs;
-
     float pole_float;
-
     uint8_t pole_round;
-
-
     now = HAL_GetTick();
-
-
     /* -----------------------------------------------------
      * IDLE / DONE / ERROR / ABORT 不处理
      * ----------------------------------------------------- */
-
     if((detect->state == PP_DETECT_IDLE)  ||
        (detect->state == PP_DETECT_DONE)  ||
        (detect->state == PP_DETECT_ERROR) ||
@@ -204,27 +224,19 @@ void FOC_PolePairDetect_Task(PPDetect_t *detect)
     {
         return;
     }
-
-
     /* -----------------------------------------------------
      * 第一阶段：
-     *
      * 固定 θe = 0
-     *
      * 让转子慢慢吸到一个稳定位置。
      * ----------------------------------------------------- */
-
     if(detect->state == PP_DETECT_ALIGN)
     {
         if((now - detect->state_tick)  < PP_DETECT_ALIGN_TIME_MS)
         {
             return;
         }
-
-
         /*
          * 吸合稳定后才记录起始位置。
-         *
          * 这样初始吸合产生的机械位移不会被算进极对数。
          */
         if(!Encoder_Read(&encoder))
@@ -233,73 +245,45 @@ void FOC_PolePairDetect_Task(PPDetect_t *detect)
             detect->state = PP_DETECT_ERROR;
             return;
         }
-
-
         detect->encoder_last = encoder;
-
         detect->mechanical_count_acc = 0;
-
         detect->electrical_angle = 0.0f;
         detect->electrical_travel = 0.0f;
-
         detect->update_tick = now;
-
         detect->state = PP_DETECT_RUNNING;
-
         return;
     }
-
-
     /* -----------------------------------------------------
-     * 第二阶段：
-     *
+     * 第二阶段
      * 缓慢旋转电角度。
      * ----------------------------------------------------- */
-
     if(detect->state == PP_DETECT_RUNNING)
     {
         if((now - detect->update_tick)  < PP_DETECT_UPDATE_TIME_MS)
         {
             return;
         }
-
-
         detect->update_tick = now;
-
-
         /*
          * 读取当前位置
          */
         if(!Encoder_Read(&encoder))
         {
             FOC_PWM_Stop();
-
             detect->state = PP_DETECT_ERROR;
-
             return;
         }
-
-
         /*
          * 累积机械位移
          */
         delta = Encoder_GetDelta( encoder,detect->encoder_last);
-
-
         detect->mechanical_count_acc += delta;
-
         detect->encoder_last = encoder;
-
-
         /*
          * 电角度继续向前旋转
          */
         detect->electrical_angle +=  PP_DETECT_STEP_RAD;
-
-
         detect->electrical_travel += PP_DETECT_STEP_RAD;
-
-
         /*
          * 角度限制在 0~2π。
          */
@@ -1052,7 +1036,7 @@ void FOC_SVPWM(float alpha, float beta)
      * 更新TIM1 CCR
      * =============================== */
 
-    arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
+    arr = __HAL_TIM_GET_AUTORELOAD(&htim1)+1U;
 
     __HAL_TIM_SET_COMPARE( &htim1, TIM_CHANNEL_1,(uint32_t)(duty_a * (float)arr) );
 
@@ -1089,10 +1073,22 @@ float FOC_PI_Run( FOC_PI_t *pi, float target, float feedback, float dt)
 {
     float error;
     float output;
+		if(motor_speed_rpm_filt>0)
+		{
+			//target-=motor_speed_rpm_filt/20
+			pi->kp = 0.000157f,
+			pi->ki=1.7f;
+		}
+		else
+		{
+			pi->kp = 0.000157f,
+			pi->ki = 0.958f;
+		}
     error = target - feedback;
     pi->integral +=pi->ki *error *dt;
     pi->integral = FOC_Limit(pi->integral,pi->out_min,pi->out_max);
     output =pi->kp * error +pi->integral;
+	
     output =FOC_Limit(output,pi->out_min,pi->out_max);
     return output;
 }
@@ -1100,6 +1096,17 @@ float FOC_PI_Run( FOC_PI_t *pi, float target, float feedback, float dt)
 float error;
 float FOC_PI_Run1( FOC_PI_t *pi, float target, float feedback, float dt)
 {
+    if(motor_speed_rpm_filt>0)
+		{
+			//target-=motor_speed_rpm_filt/20
+			pi->kp = 0.000157f,
+			pi->ki=1.7f;
+		}
+		else
+		{
+			pi->kp = 0.000157f,
+			pi->ki = 0.958f;
+		}
     
     float output;
     error = target - feedback;
@@ -1181,11 +1188,10 @@ float FOC_CurrentLoop(void)
 
     float V_alpha;
     float V_beta;
-
+	
     Vd = FOC_PI_Run(&PI_Id, Id_ref,I_d, FOC_DT);
-
-    Vq = FOC_PI_Run1( &PI_Iq,Iq_ref,I_q, FOC_DT);
-
+		Vq = FOC_PI_Run1( &PI_Iq,Iq_ref,I_q, FOC_DT);
+		
     FOC_InvPark(Vd,Vq,theta_e,&V_alpha,&V_beta);
 
     FOC_SVPWM(V_alpha,V_beta);
@@ -1237,17 +1243,18 @@ float FOC_CurrentLoop(void)
 //}
 //速度环
 #define ENCODER_CPR    16384
-#define SPEED_DT       0.00005f       //50us
+#define SPEED_DT       0.005f       //1ms
 
 volatile float motor_speed_rpm = 0.0f;
 volatile float motor_speed_rpm_filt = 0.0f;
 
-void FOC_SpeedCalculate(uint16_t encoder_raw)
+
+void FOC_SpeedCalculate(uint64_t encoder_raw)
 {
-    static uint16_t last_raw = 0;
+    static uint64_t last_raw = 0;
     static uint8_t first = 1;
 
-    int32_t delta;
+    int64_t delta;
 
     if(first)
     {
@@ -1256,8 +1263,8 @@ void FOC_SpeedCalculate(uint16_t encoder_raw)
         return;
     }
 
-    delta = (int32_t)encoder_raw -
-            (int32_t)last_raw;
+    delta = (int64_t)encoder_raw -
+            (int64_t)last_raw;
 
     last_raw = encoder_raw;
 
@@ -1291,9 +1298,9 @@ typedef struct
 } SpeedPI_t;
 
 SpeedPI_t Speed_PI = {
-    .kp = 1.8f,
-    .ki = 0.0006f,
-		.kd =0,// 6.1f,
+    .kp = 10.8f,//1.8f,
+    .ki = 20.1f,
+		.kd =10.0f,// 6.1f,
     .integral = 0.0f,
     .out_limit = 1500.0f
 };
@@ -1302,14 +1309,27 @@ float last_error_V=0.0f;
 float last_error_V2=0.0f;
 float FOC_SpeedLoop(float speed_ref)
 {
-   
+		int16_t limit_i=1000;
     float iq_ref;
-
+		if(speed_ref>1000||speed_ref<-1000)
+		{
+			Speed_PI.kp = 2.42f;//1.8f,
+			Speed_PI.ki = 25.3f;//2.2f;
+			Speed_PI.kd =15.0f;// 6.1f,
+			limit_i=300;
+		}
     error_V = -(speed_ref - motor_speed_rpm_filt);			//期望-实际=error
-
-    iq_ref=Speed_PI.kp * (error_V-last_error_V)+Speed_PI.ki*error_V+
-					 Speed_PI.kd	*	(error_V-2*last_error_V+last_error_V2);
-		Iq_ref +=iq_ref;
+		Speed_PI.integral +=Speed_PI.ki *error_V *SPEED_DT;
+		if(Speed_PI.integral>limit_i)
+		{
+			Speed_PI.integral=limit_i;
+		}
+		else if(Speed_PI.integral<-limit_i)
+		{
+			Speed_PI.integral=-limit_i;
+		}
+    Iq_ref=Speed_PI.kp * error_V+Speed_PI.integral+
+					 Speed_PI.kd	*	(error_V-last_error_V);
     if(Iq_ref > Speed_PI.out_limit)
         Iq_ref = Speed_PI.out_limit;
 
@@ -1330,16 +1350,12 @@ float FOC_SpeedLoop(float speed_ref)
 //    float out_limit;
 //		long pos;
 //} POSPI_t;
-
-
-
-
 POSPI_t POS_PI = {
-    .kp = 0.14f,
+    .kp = 0.15f,
     .ki = 0.00055f,
 		.kd = 0.0f,
     .integral = 0.0f,
-    .out_limit =2100.0f,
+    .out_limit =80.0f,
 		.pos=0
 };
 
@@ -1398,13 +1414,13 @@ float FOC_PosLoop(int64_t pos_ref)
 
     error_pos = (pos_ref-POS_PI.pos );			//期望-实际=error
 		POS_PI.integral+=error_pos*SPEED_DT;
-		if(POS_PI.integral>1400)
+		if(POS_PI.integral>1500)
 		{
-			POS_PI.integral=1400;
+			POS_PI.integral=1500;
 		}
-		else	if(POS_PI.integral<-1400)
+		else	if(POS_PI.integral<-1500)
 		{
-			POS_PI.integral=-1400;
+			POS_PI.integral=-1500;
 		}
     speed_ref=POS_PI.kp * error_pos+POS_PI.ki * POS_PI.integral;
 	

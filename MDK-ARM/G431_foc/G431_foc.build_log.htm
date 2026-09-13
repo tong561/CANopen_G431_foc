@@ -21,13 +21,15 @@ Target DLL:      CMSIS_AGDI.dll V1.33.24.0
 Dialog DLL:      TCM.DLL V1.56.6.0
  
 <h2>Project:</h2>
-D:\WeCanCode\Wu\G431_foc\MDK-ARM\G431_foc.uvprojx
-Project File Date:  09/01/2026
+D:\WeCanCode\Wu\G431_foc - ¸±±¾\MDK-ARM\G431_foc.uvprojx
+Project File Date:  09/10/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\keilv5\ARM\ARMCOMPILER_506\Bin'
 Build target 'G431_foc'
 compiling foc.c...
+..\myCode\foc.h(172): warning:  #1295-D: Deprecated declaration NumberOfPolePairs_Check - give arg types
+  void NumberOfPolePairs_Check();
 ..\myCode\foc.c(120): warning:  #177-D: variable "va"  was declared but never referenced
       float va;
 ..\myCode\foc.c(121): warning:  #177-D: variable "vb"  was declared but never referenced
@@ -48,11 +50,13 @@ compiling foc.c...
       float duty_c;
 ..\myCode\foc.c(132): warning:  #177-D: variable "arr"  was declared but never referenced
       uint32_t arr;
-..\myCode\foc.c: 10 warnings, 0 errors
+..\myCode\foc.c(1313): warning:  #177-D: variable "iq_ref"  was declared but never referenced
+      float iq_ref;
+..\myCode\foc.c: 12 warnings, 0 errors
 linking...
-Program Size: Code=36692 RO-data=616 RW-data=672 ZI-data=31560  
+Program Size: Code=38076 RO-data=616 RW-data=696 ZI-data=28840  
 FromELF: creating hex file...
-"G431_foc\G431_foc.axf" - 0 Error(s), 10 Warning(s).
+"G431_foc\G431_foc.axf" - 0 Error(s), 12 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -76,7 +80,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@6.1.1
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:13
+Build Time Elapsed:  00:00:05
 </pre>
 </body>
 </html>

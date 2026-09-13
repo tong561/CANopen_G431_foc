@@ -103,7 +103,7 @@ void FOC_StablePointTest(void);
 
 #define MOTOR_POLE_PAIRS    7.0f
 #define MOTOR_ENCODER_DIR  (-1.0f)
-#define ELECTRICAL_OFFSET   5.936242f
+#define ELECTRICAL_OFFSET  5.78f//6.3f// 5.936242f
 extern float Vd;
 extern float Vq;
 extern float error;
@@ -121,7 +121,6 @@ void FOC_Clarke(float Ia, float Ib);
 void FOC_Park(float alpha, float beta, float angle);
 void FOC_SVPWM(float alpha, float beta);
 void FOC_SetOpenLoopVector( float electrical_angle,float amplitude);
-
 void FOC_InvPark(float Vd,float Vq,float theta,float *V_alpha,float *V_beta);
 typedef struct
 {
@@ -149,7 +148,7 @@ float FOC_CurrentLoop(void);
 extern volatile float motor_speed_rpm ;
 extern volatile float motor_speed_rpm_filt ;
 extern float error_V;
-void FOC_SpeedCalculate(uint16_t encoder_raw);
+void FOC_SpeedCalculate(uint64_t encoder_raw);
 void FOC_POSCalculate(uint16_t encoder_raw);
 float FOC_PosLoop(int64_t pos_ref);
 float FOC_SpeedLoop(float speed_ref);
@@ -168,4 +167,7 @@ typedef struct
 
 
 extern POSPI_t POS_PI;
+
+
+void NumberOfPolePairs_Check();
 #endif
