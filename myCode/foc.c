@@ -1,6 +1,3 @@
-#include "foc.h"
-#include "bspUSB.h"
-#include "myADC.h"
 /*
 链路
 
@@ -13,14 +10,14 @@
 																		│
 																		▼
  Ia ──┐              ┌─────────────┐
-				├───────│ Clarke  							    │
+				├───────│			 Clarke  					  │
  Ib ──┘              └──────┬──────┘
 																			│
 																		Iα Iβ
 																			│
 																			▼
 													┌──────────┐
-		Encoder ──θe───	│ Park  					 	  │
+		Encoder ──θe───	│				 Park  		  │
 													└────┬─────┘
 																		│
 																	Id Iq
@@ -47,30 +44,36 @@
 												IN1 			 IN2   			IN3
 												└─────┬─────┘
 																		│
-																DRV8313
-                    ┌─────┼─────┐
-										▼ 			    ▼ 			    ▼
-                   OUT1 			 OUT2  				OUT3
-                    U    			 V     				W
-															PMSM
+																	DRV8313
+												┌─────┼─────┐
+												▼ 			    ▼ 			    ▼
+											OUT1 			 OUT2  				OUT3
+												U    			 V     				W
+																	PMSM
 
 
 
 */
 
-
-
+#include "bspUSB.h"
+#include "myADC.h"
 #include "foc.h"
 #include "tim.h"
 #include "MT6816.h"
 
 #include <math.h>
 
+//初始化全局变量
+MotorParameters_t MotorParm=
+{
+	.VBUS=12
+	
+};
+	
 
 /* =========================================================
- * 内部函数
+ * 内部函数,限制幅值范围
  * ========================================================= */
-
 static float FOC_Limit(float value, float min_value,float max_value)
 {
     if(value > max_value)
@@ -86,908 +89,115 @@ static float FOC_Limit(float value, float min_value,float max_value)
 
 void FOC_PWM_Start(void)
 {
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 }
 
 
 void FOC_PWM_Stop(void)
 {
-    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
-    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);//a
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);//b
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);//c
 }
 
-
-/* =========================================================
- * 开环 SVPWM
- *
- * amplitude:
- *
- * 0.01 = 很弱
- * 0.02 = 弱
- * 0.05 = 已经比较明显
- *
- * 第一次不要给大。
- * ========================================================= */
-
-void FOC_SetOpenLoopVector(float electrical_angle, float amplitude)
-{
-    float alpha;//a轴
-    float beta;	//b轴
-		//三相电压
-    float va;
-    float vb;
-    float vc;
-
-    float vmax;
-    float vmin;
-    float offset;
-
-    float duty_a;
-    float duty_b;
-    float duty_c;
-
-    uint32_t arr;
-	   /* 限制整个电压矢量 */
-    amplitude = FOC_Limit(amplitude, 0.0f, 0.50f);
-    /*
-     * αβ 静止坐标系电压矢量
-     */
-    alpha = amplitude * cosf(electrical_angle);
-    beta  = amplitude * sinf(electrical_angle);
-		FOC_SVPWM( alpha, beta );
-}
-
-/*
-极对数检测
-
-*/
-
-#define LAPS_NUMBLE	10
-void NumberOfPolePairs_Check()
-{
-	float a=0; //旋转角
-	static long start_pos=0;
-	FOC_SetOpenLoopVector(a,0.2);//转子先吸合1s;
-	HAL_Delay(1000);
-	start_pos =POS_PI.pos;
-	for(unsigned int i=0;i<360*LAPS_NUMBLE;i++)
-	{
-		a+=FOC_2PI/360;
-		if(a>FOC_2PI)
-			a-=FOC_2PI;
-		FOC_SetOpenLoopVector(a,0.1);//转子先吸合1s
-		HAL_Delay(1);
-		usb_print("Electrical angle:%f,%f,%f,%f,%f%%\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,(float)i*100/(360*LAPS_NUMBLE));
-	}
-	HAL_Delay(1000);
-	usb_print("Electrical angle:%f,%f,%f,%f,%f%%,%f\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,100,(float)LAPS_NUMBLE/((float)(POS_PI.pos-start_pos)/MT6816_CPR));
-	HAL_Delay(1000);
-}
-
-
-
-
-
-/* =========================================================
- * 开始检测
- * ========================================================= */
-
-void FOC_PolePairDetect_Start(PPDetect_t *detect)
-{
-    uint32_t now;
-    now = HAL_GetTick();
-    detect->state = PP_DETECT_ALIGN;
-    detect->state_tick  = now;
-    detect->update_tick = now;
-    detect->encoder_last = 0;
-    detect->mechanical_count_acc = 0;
-    detect->electrical_angle = 0.0f;
-    detect->electrical_travel = 0.0f;
-    detect->pole_pairs_float = 0.0f;
-    detect->pole_pairs = 0;
-    detect->direction = 0;
-
-
-    /*
-     * 先建立 θe = 0 的弱磁场。
-     */
-    FOC_SetOpenLoopVector( 0.0f,  PP_DETECT_PWM_AMPLITUDE);
-    FOC_PWM_Start();
-}
-
-
-/* =========================================================
- * 自动测极对数任务
- *
- * 放在 while(1) 中不停调用。
- * ========================================================= */
-
-void FOC_PolePairDetect_Task(PPDetect_t *detect)
-{
-    uint32_t now;
-    uint16_t encoder;
-    int32_t delta;
-    int32_t mechanical_abs;
-    float pole_float;
-    uint8_t pole_round;
-    now = HAL_GetTick();
-    /* -----------------------------------------------------
-     * IDLE / DONE / ERROR / ABORT 不处理
-     * ----------------------------------------------------- */
-    if((detect->state == PP_DETECT_IDLE)  ||
-       (detect->state == PP_DETECT_DONE)  ||
-       (detect->state == PP_DETECT_ERROR) ||
-       (detect->state == PP_DETECT_ABORT))
-    {
-        return;
-    }
-    /* -----------------------------------------------------
-     * 第一阶段：
-     * 固定 θe = 0
-     * 让转子慢慢吸到一个稳定位置。
-     * ----------------------------------------------------- */
-    if(detect->state == PP_DETECT_ALIGN)
-    {
-        if((now - detect->state_tick)  < PP_DETECT_ALIGN_TIME_MS)
-        {
-            return;
-        }
-        /*
-         * 吸合稳定后才记录起始位置。
-         * 这样初始吸合产生的机械位移不会被算进极对数。
-         */
-        if(!Encoder_Read(&encoder))
-        {
-            FOC_PWM_Stop();
-            detect->state = PP_DETECT_ERROR;
-            return;
-        }
-        detect->encoder_last = encoder;
-        detect->mechanical_count_acc = 0;
-        detect->electrical_angle = 0.0f;
-        detect->electrical_travel = 0.0f;
-        detect->update_tick = now;
-        detect->state = PP_DETECT_RUNNING;
-        return;
-    }
-    /* -----------------------------------------------------
-     * 第二阶段
-     * 缓慢旋转电角度。
-     * ----------------------------------------------------- */
-    if(detect->state == PP_DETECT_RUNNING)
-    {
-        if((now - detect->update_tick)  < PP_DETECT_UPDATE_TIME_MS)
-        {
-            return;
-        }
-        detect->update_tick = now;
-        /*
-         * 读取当前位置
-         */
-        if(!Encoder_Read(&encoder))
-        {
-            FOC_PWM_Stop();
-            detect->state = PP_DETECT_ERROR;
-            return;
-        }
-        /*
-         * 累积机械位移
-         */
-        delta = Encoder_GetDelta( encoder,detect->encoder_last);
-        detect->mechanical_count_acc += delta;
-        detect->encoder_last = encoder;
-        /*
-         * 电角度继续向前旋转
-         */
-        detect->electrical_angle +=  PP_DETECT_STEP_RAD;
-        detect->electrical_travel += PP_DETECT_STEP_RAD;
-        /*
-         * 角度限制在 0~2π。
-         */
-        if(detect->electrical_angle >= FOC_2PI)
-        {
-            detect->electrical_angle -= FOC_2PI;
-        }
-
-
-        /*
-         * 更新定子磁场
-         */
-        FOC_SetOpenLoopVector(  detect->electrical_angle, PP_DETECT_PWM_AMPLITUDE);
-
-
-        /*
-         * 已经走够设定的电周期
-         */
-        if(detect->electrical_travel >=((float)PP_DETECT_ELEC_CYCLES * FOC_2PI))
-        {
-            detect->state = PP_DETECT_END_WAIT;
-            detect->state_tick = now;
-            detect->update_tick = now;
-        }
-
-        return;
-    }
-
-
-    /* -----------------------------------------------------
-     * 第三阶段：
-     *
-     * 已经走完电周期，但继续固定最后的磁场。
-     *
-     * 给机械系统一点时间消除滞后。
-     * ----------------------------------------------------- */
-
-    if(detect->state == PP_DETECT_END_WAIT)
-    {
-        /*
-         * 最后几百 ms 仍然继续累计编码器位移，
-         * 防止转子略微落后于旋转磁场。
-         */
-        if((now - detect->update_tick)>= PP_DETECT_UPDATE_TIME_MS)
-        {
-            detect->update_tick = now;
-
-
-            if(!Encoder_Read(&encoder))
-            {
-                FOC_PWM_Stop();
-
-                detect->state = PP_DETECT_ERROR;
-
-                return;
-            }
-
-
-            delta = Encoder_GetDelta( encoder, detect->encoder_last);
-
-
-            detect->mechanical_count_acc += delta;
-
-            detect->encoder_last = encoder;
-        }
-
-
-        if((now - detect->state_tick)  < PP_DETECT_END_WAIT_MS)
-        {
-            return;
-        }
-
-
-        /*
-         * 测量完成，关闭输出。
-         */
-        FOC_PWM_Stop();
-
-
-        /* 获取机械位移绝对值 */
-        mechanical_abs = detect->mechanical_count_acc;
-
-
-        if(mechanical_abs < 0)
-        {
-            mechanical_abs = -mechanical_abs;
-            detect->direction = -1;
-        }
-        else
-        {
-            detect->direction = 1;
-        }
-
-
-        /*
-         * 转子运动太少：
-         *
-         * 通常表示 PWM amplitude 太小，
-         * 电机没有跟着定子磁场转。
-         */
-        if(mechanical_abs < 150)
-        {
-            detect->state = PP_DETECT_ERROR;
-
-            return;
-        }
-
-
-        /*
-         *             N_elec × Encoder_CPR
-         * polePair = ------------------------
-         *                mechanical_count
-         */
-        pole_float = ((float)PP_DETECT_ELEC_CYCLES *  (float)MT6816_CPR)/ (float)mechanical_abs;
-        detect->pole_pairs_float = pole_float;
-
-
-        /*
-         * 四舍五入到整数。
-         */
-        pole_round = (uint8_t)(pole_float + 0.5f);
-
-
-        /*
-         * 基本合法性检查。
-         */
-        if((pole_round < 1) ||(pole_round > 64))
-        {
-            detect->state = PP_DETECT_ERROR;
-
-            return;
-        }
-
-
-        /*
-         * 理论计算结果应该很接近整数。
-         *
-         * 比如：
-         *
-         * 6.92 -> 7，可以接受
-         * 7.08 -> 7，可以接受
-         *
-         * 7.48 -> 不可靠
-         */
-        if(fabsf(pole_float - (float)pole_round) > 0.35f)
-        {
-            detect->state = PP_DETECT_ERROR;
-
-            return;
-        }
-
-
-        detect->pole_pairs = pole_round;
-
-        detect->state = PP_DETECT_DONE;
-
-        return;
-    }
-}
-
-
-/* =========================================================
- * 紧急停止
- * ========================================================= */
-
-void FOC_PolePairDetect_Abort(PPDetect_t *detect)
-{
-    FOC_PWM_Stop();
-
-    detect->state = PP_DETECT_ABORT;
-}
-
-
-/* =========================================================
- * 电流保护
- *
- * 后面有真实 Ia/Ib 后，在 ADC ISR 中调用。
- * ========================================================= */
-
-uint8_t FOC_PolePairDetect_CurrentProtect(  PPDetect_t *detect,  float ia, float ib,  float current_limit)
-{
-    if((fabsf(ia) > current_limit) ||(fabsf(ib) > current_limit))
-    {
-        FOC_PolePairDetect_Abort(detect);
-        return 1;
-    }
-
-    return 0;
-}
-
-
-
-#include <math.h>
-#include <stdint.h>
-
-////#define MOTOR_POLE_PAIRS       7U
-#define TEST_MECH_TURNS        5U
-#define TEST_TOTAL_POINTS      (MOTOR_POLE_PAIRS * TEST_MECH_TURNS)
-
-/* 一个电周期分成360步，每步1°电角度 */
-#define TEST_ELEC_STEPS        360U
-
-/* 每一步延时 */
-#define TEST_STEP_DELAY_MS     5U
-
-/* 到稳定点以后等待 */
-#define TEST_STABLE_DELAY_MS   500U
-
-/* 稳定以后取10次平均 */
-#define TEST_SAMPLE_NUM        10U
-#define TEST_SAMPLE_DELAY_MS   5U
-/* ============================================================
- * 稳定后读取多次MT6816并平均
- *
- * 不能直接普通平均raw，因为可能在0/16383附近。
- * ============================================================ */
-static uint16_t Encoder_ReadAverage(void)
-{
-    uint16_t base;
-    uint16_t raw;
-
-    int32_t delta;
-    int32_t delta_sum = 0;
-
-    int32_t average_raw;
-
-    base = MT6816_ReadOneAngle();
-
-    for(uint16_t i = 0; i < TEST_SAMPLE_NUM; i++)
-    {
-        raw = MT6816_ReadOneAngle();
-
-        delta = Encoder_GetDelta(raw, base);
-
-        delta_sum += delta;
-
-        HAL_Delay(TEST_SAMPLE_DELAY_MS);
-    }
-
-
-    average_raw = (int32_t)base + delta_sum / TEST_SAMPLE_NUM;
-
-
-    /* 处理0~16383范围 */
-    while(average_raw >= MT6816_CPR)
-    {
-        average_raw -= MT6816_CPR;
-    }
-
-    while(average_raw < 0)
-    {
-        average_raw += MT6816_CPR;
-    }
-
-
-    return (uint16_t)average_raw;
-}
-
-
-/* ============================================================
- * 自动运行5机械圈并统计
- * ============================================================ */
-void FOC_StablePointTest(void)
-{
-    float a = 0.0f;
-
-    uint16_t raw_start;
-    uint16_t raw_last;
-    uint16_t raw_now;
-
-    int32_t delta;
-    int32_t mechanical_count_acc = 0;
-
-    float delta_abs;
-    float expected_delta;
-
-    float error;
-    float error_abs;
-
-    float error_sum = 0.0f;
-    float max_error = 0.0f;
-
-    float step_sum = 0.0f;
-
-
-    /*
-     * 7对极：
-     *
-     * 相邻同电角度稳定点理论距离
-     *
-     * 16384 / 7
-     * = 2340.571 counts
-     */
-    expected_delta =(float)MT6816_CPR /(float)MOTOR_POLE_PAIRS;
-
-
-    /* ===========================
-     * 启动
-     * =========================== */
-
-    DRV8313_ENABLE();
-
-    FOC_PWM_Start();
-
-
-    /*
-     * 首先固定在0电角度
-     */
-    FOC_SetOpenLoopVector( 0.0f,0.2);
-
-
-    /* 等第一次吸合稳定 */
-    HAL_Delay(1000);
-
-
-    raw_start = Encoder_ReadAverage();
-    raw_last  = raw_start;
-
-
-    usb_print("\r\n===== Stable Point Test =====\r\n" );
-
-    usb_print("Start Raw=%u\r\n" "ExpectedStep=%.3f\r\n",  raw_start,expected_delta);
-
-
-    /*
-     * CSV标题
-     */
-    usb_print( "Point,Turn,Raw,Delta,AbsDelta," "Error,MechAcc,Ia,Ib,Ic\r\n" );
-
-
-    /* ========================================================
-     * 一共运行35个电周期
-     *
-     * 35 / 7 = 5机械圈
-     * ======================================================== */
-
-    for(uint16_t point = 1; point <= TEST_TOTAL_POINTS;point++)
-    {
-
-        /* ==========================================
-         * 完整旋转1个电周期
-         * ========================================== */
-
-        for(uint16_t step = 0;step < TEST_ELEC_STEPS; step++)
-        {
-            a +=  FOC_2PI /(float)TEST_ELEC_STEPS;
-
-
-            /*
-             * 保持0~2PI
-             */
-            if(a >= FOC_2PI)
-            {
-                a -= FOC_2PI;
-            }
-
-
-            FOC_SetOpenLoopVector(a,0.2 );
-
-            HAL_Delay(TEST_STEP_DELAY_MS);
-        }
-
-
-        /* ==========================================
-         * 已到下一个稳定点
-         *
-         * 保持当前磁场500ms
-         * ========================================== */
-
-        HAL_Delay(TEST_STABLE_DELAY_MS);
-
-
-        /* ==========================================
-         * 读取稳定位置
-         * ========================================== */
-
-        raw_now = Encoder_ReadAverage();
-
-
-        /* ==========================================
-         * 计算相邻稳定点机械变化
-         * ========================================== */
-
-        delta = Encoder_GetDelta( raw_now,raw_last );
-        mechanical_count_acc += delta;
-        delta_abs = fabsf((float)delta);
-
-
-        /*
-         * 理论应该是：
-         *
-         * 2340.571 count
-         */
-        error =delta_abs -expected_delta;
-
-
-        error_abs = fabsf(error);
-
-
-        error_sum += error_abs;
-
-        step_sum += delta_abs;
-
-
-        if(error_abs > max_error)
-        {
-            max_error = error_abs;
-        }
-
-
-        /* ==========================================
-         * 输出本次结果
-         * ========================================== */
-
-        usb_print(
-            "%u,%.3f,%u,%ld,"
-            "%.2f,%.2f,%ld,"
-            "%.1f,%.1f,%.1f\r\n",
-
-            point,
-
-            (float)point /
-            (float)MOTOR_POLE_PAIRS,
-
-            raw_now,
-
-            delta,
-
-            delta_abs,
-
-            error,
-
-            mechanical_count_acc,
-
-            ADC_parm.I_a,
-            ADC_parm.I_b,
-            ADC_parm.I_c
-        );
-
-
-        raw_last = raw_now;
-    }
-
-
-    /* ========================================================
-     * 测试结束
-     * ======================================================== */
-
-    FOC_PWM_Stop();
-    DRV8313_DISABLE();
-
-
-    /* 实际机械圈数 */
-    float measured_mech_turns =fabsf((float)mechanical_count_acc) /(float)MT6816_CPR;
-
-
-    /*
-     * 总共主动运行35个电周期
-     */
-    float measured_pole_pairs =(float)TEST_TOTAL_POINTS / measured_mech_turns;
-
-
-    /*
-     * 平均相邻稳定点距离
-     */
-    float average_step =step_sum /(float)TEST_TOTAL_POINTS;
-
-
-    /*
-     * 平均绝对误差
-     */
-    float average_error = error_sum /(float)TEST_TOTAL_POINTS;
-
-
-    /*
-     * 五圈以后应该回到原始位置附近
-     */
-    int32_t closure_error = Encoder_GetDelta( raw_last, raw_start );
-
-
-    usb_print("\r\n===== RESULT =====\r\n" );
-    usb_print(
-        "Points=%u\r\n"
-        "ExpectedMechTurns=%u\r\n"
-        "MechAcc=%ld\r\n"
-        "MeasuredMechTurns=%.6f\r\n"
-        "PolePairsEstimate=%.6f\r\n"
-        "ExpectedStep=%.3f\r\n"
-        "AverageStep=%.3f\r\n"
-        "AverageAbsError=%.3f\r\n"
-        "MaxError=%.3f\r\n"
-        "StartRaw=%u\r\n"
-        "EndRaw=%u\r\n"
-        "ClosureError=%ld\r\n",
-
-        TEST_TOTAL_POINTS,
-        TEST_MECH_TURNS,
-
-        mechanical_count_acc,
-
-        measured_mech_turns,
-        measured_pole_pairs,
-
-        expected_delta,
-        average_step,
-
-        average_error,
-        max_error,
-
-        raw_start,
-        raw_last,
-        closure_error
-    );
-}
-
-void FOC_FindElectricalOffset(void)
-{
-    uint16_t raw;
-    float corrected_raw;
-    float mech_angle;
-    float elec_without_offset;
-    float offset;
-
-    DRV8313_ENABLE();
-    FOC_PWM_Start();
-
-    /*
-     * 定子磁场固定在电角度 0
-     */
-    FOC_SetOpenLoopVector(0.0f, 0.20f);
-
-    /*
-     * 等待转子吸合
-     */
-    HAL_Delay(1500);
-
-    /*
-     * 读取编码器
-     */
-    raw = MT6816_ReadOneAngle();
-
-#if MT6816_LUT_ENABLE
-    corrected_raw = Encoder_GetCorrectedRaw(raw);
-#else
-    corrected_raw = (float)raw;
-#endif
-
-    /*
-     * 机械角
-     */
-    mech_angle =
-        corrected_raw
-        * FOC_2PI
-        / (float)MT6816_CPR;
-
-    /*
-     * 不带 offset 的电角度
-     */
-    elec_without_offset =
-        MOTOR_ENCODER_DIR
-        * MOTOR_POLE_PAIRS
-        * mech_angle;
-
-    elec_without_offset =
-        FOC_WrapAngle(elec_without_offset);
-
-    /*
-     * 因为现在人为规定定子电角度 = 0
-     *
-     * 0 = elec_without_offset + offset
-     */
-    offset =
-        FOC_WrapAngle(-elec_without_offset);
-
-    usb_print(
-        "\r\n===== Electrical Offset =====\r\n"
-        "Raw=%u\r\n"
-        "CorrectedRaw=%.3f\r\n"
-        "ThetaM=%.6f rad\r\n"
-        "ThetaM=%.3f deg\r\n"
-        "ElecNoOffset=%.6f rad\r\n"
-        "ElecNoOffset=%.3f deg\r\n"
-        "OFFSET=%.6f rad\r\n"
-        "OFFSET=%.3f deg\r\n",
-        raw,
-        corrected_raw,
-        mech_angle,
-        mech_angle * 180.0f / 3.14159265359f,
-        elec_without_offset,
-        elec_without_offset * 180.0f / 3.14159265359f,
-        offset,
-        offset * 180.0f / 3.14159265359f
-    );
-
-    FOC_PWM_Stop();
-    DRV8313_DISABLE();
-}
-
-
-/******************************电流环**************************************
-*/
-float I_alpha = 0.0f;
-float I_beta  = 0.0f;
-
-float I_d = 0.0f;
-float I_q = 0.0f;
-
-float theta_m = 0.0f;
-float theta_e = 0.0f;
-
-uint16_t FOC_encoder_raw;//电机编码器值
-#define FOC_DT 0.00005f	//时间周期50us
-//角度归一化0-360（0-2PI）
-float FOC_WrapAngle(float angle)
-{
-    while(angle >= FOC_2PI)
-        angle -= FOC_2PI;
-    while(angle < 0.0f)
-        angle += FOC_2PI;
-    return angle;
-}
-
-
-#define MT6816_LUT_ENABLE  0	//1LUT补偿
-
-void FOC_UpdateElectricalAngle(void)
-{
-    float encoder_used;
-
-    FOC_encoder_raw = MT6816_ReadOneAngle();
-
-#if MT6816_LUT_ENABLE
-
-    encoder_used =
-        Encoder_GetCorrectedRaw(FOC_encoder_raw);
-
-#else
-
-    encoder_used =
-        (float)FOC_encoder_raw;
-
-#endif
-
-    theta_m =encoder_used *FOC_2PI /(float)MT6816_CPR;
-
-    theta_e = MOTOR_ENCODER_DIR * MOTOR_POLE_PAIRS *theta_m + ELECTRICAL_OFFSET;
-
-    theta_e = FOC_WrapAngle(theta_e);
-}
-
+//基础算法部分
 //clark变换
 void FOC_Clarke(float Ia, float Ib)
 {
-    I_alpha = Ia;
-    I_beta	 =(Ia + 2.0f * Ib)* 0.5773502f;
+	I_alpha = Ia;
+	I_beta	 =(Ia + 2.0f * Ib)* 0.5773502f;
 }
 
 float s=0,c=0;
 //park变换
 void FOC_Park(float alpha, float beta, float angle)
 {
-      s= sinf(angle);
-			c = cosf(angle);
-
-    I_d = alpha * c + beta  * s;
-    I_q =-alpha * s + beta  * c;
+	s= sinf(angle);
+	c = cosf(angle);
+	I_d = alpha * c + beta  * s;
+	I_q =-alpha * s + beta  * c;
 }
 /*park逆变换
 Vd
 Vq
 theta 电角度
-
-
 */
 void FOC_InvPark(float Vd, float Vq, float theta,float *V_alpha,float *V_beta)
 {
-     s = sinf(theta);
-     c = cosf(theta);
-
-    *V_alpha =Vd * c - Vq * s;
-    *V_beta = Vd * s +Vq * c;
+	s = sinf(theta);
+	c = cosf(theta);
+	*V_alpha =Vd * c - Vq * s;
+	*V_beta = Vd * s +Vq * c;
 }
-
-void FOC_SVPWM(float alpha, float beta)
+/*
+SPWM算法
+*/
+void FOC_SPWM(float alpha, float beta)
 {
     float va;
     float vb;
     float vc;
-
-    float vmax;
-    float vmin;
-    float offset;
-
+	
     float duty_a;
     float duty_b;
     float duty_c;
-
     uint32_t arr;
-
-
+    /*
+     * alpha/beta -> abc克拉克逆变换
+     */
+    va = alpha;
+    vb = -0.5f * alpha  + 0.8660254038f * beta;
+    vc = -0.5f * alpha- 0.8660254038f * beta;
+    /*
+     * SPWM:
+     * 不做 vmax/vmin 零序注入
+     */
+    duty_a = 0.5f + va;
+    duty_b = 0.5f + vb;
+    duty_c = 0.5f + vc;
+    /*
+     * 防止超过合法 duty
+     */
+    duty_a = FOC_Limit(duty_a, 0.02f, 0.98f);
+    duty_b = FOC_Limit(duty_b, 0.02f, 0.98f);
+    duty_c = FOC_Limit(duty_c, 0.02f, 0.98f);
+	//计算解析：dutya*arr:占空比*周期为高电平持续时间建议改（1-duty)
+	/*（中心对齐模式）
+	我期望中间直接满足					现在实际俩边加起来才是我的实际占空比
+			_______								_____					____
+		 |			 |									 |			 |
+	___|			 |___								 |_______|	
+	*/
+    arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_1,(uint32_t)(duty_a * (float)arr) );
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_2,(uint32_t)(duty_b * (float)arr));
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr) );
+}
+/*************************************
+SVPWM算法：电压马鞍波
+************************************/
+void FOC_SVPWM(float alpha, float beta)
+{
+		//三相电压
+    float va;
+    float vb;
+    float vc;
+		//电压最大最小值
+    float vmax;
+    float vmin;
+		//零序注入量
+    float offset;
+		//三相占空比
+    float duty_a;
+    float duty_b;
+    float duty_c;
+		//定时周期
+    uint32_t arr;
     /* ===============================
-     * Alpha/Beta -> 三相
+     * Alpha/Beta -> 三相 克拉克逆变换
      * =============================== */
-
     va = alpha;
     vb = -0.5f * alpha+ 0.8660254f * beta;
     vc = -0.5f * alpha- 0.8660254f * beta;
@@ -1008,42 +218,228 @@ void FOC_SVPWM(float alpha, float beta)
     /* ===============================
      * 零序注入 / SVPWM
      * =============================== */
-
     offset = 0.5f * (vmax + vmin);
     va -= offset;
     vb -= offset;
     vc -= offset;
-
-
     /* ===============================
      * 转换成 0~1 Duty占空比
      * =============================== */
-
     duty_a = 0.5f + va;
     duty_b = 0.5f + vb;
     duty_c = 0.5f + vc;
-
-
     /*
      * 最终保护
      */
     duty_a = FOC_Limit(duty_a, 0.02f, 0.98f);
     duty_b = FOC_Limit(duty_b, 0.02f, 0.98f);
     duty_c = FOC_Limit(duty_c, 0.02f, 0.98f);
-
-
     /* ===============================
      * 更新TIM1 CCR
      * =============================== */
-
     arr = __HAL_TIM_GET_AUTORELOAD(&htim1)+1U;
-
     __HAL_TIM_SET_COMPARE( &htim1, TIM_CHANNEL_1,(uint32_t)(duty_a * (float)arr) );
-
     __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_2, (uint32_t)(duty_b * (float)arr));
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr));
+}
 
-    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr)
-    );
+/* =========================================================
+ * 开环 SVPWM
+ * amplitude:
+ * 第一次不要给大。
+ * ========================================================= */
+
+void FOC_SetOpenLoopVector(float electrical_angle, float amplitude)
+{
+    float alpha;//a轴
+    float beta;	//b轴
+
+	   /* 限制整个电压矢量 */
+    amplitude = FOC_Limit(amplitude, 0.0f, 0.50f);
+    /*
+     * αβ 静止坐标系电压矢量
+     */
+    alpha = amplitude * cosf(electrical_angle);
+    beta  = amplitude * sinf(electrical_angle);
+		FOC_SVPWM( alpha, beta );
+}
+
+/*
+极对数检测 转子吸合-》记录开始POS-》转子运动-》记录结束POS-》计数极对数-》吸合-》计数电角度偏移
+
+*/
+signed char NumberOfPolePairs_Check(unsigned char laps_numble)
+{
+	float a=0; //旋转角
+	float PolePairs=0;
+	static long start_pos=0;
+	char Symbol=0;//记录符号
+	FOC_SetOpenLoopVector(a,0.2);//转子先吸合1s;
+	HAL_Delay(1000);
+	start_pos =POS_PI.pos;
+	for(unsigned int i=0;i<360*laps_numble;i++)
+	{
+		a+=FOC_2PI/360;
+		if(a>FOC_2PI)
+			a-=FOC_2PI;
+		FOC_SetOpenLoopVector(a,0.1);//转子旋转
+		HAL_Delay(1);
+		usb_print("Electrical angle:%f,%f,%f,%f,%f%%\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,(float)i*100/(360*laps_numble));
+	}
+	HAL_Delay(1000);
+	if(POS_PI.pos-start_pos!=0)
+		PolePairs=(float)laps_numble/((float)(POS_PI.pos-start_pos)/MT6816_CPR);
+	else
+		return (char)-1U;
+	usb_print("Electrical angle:%f,%f,%f,%f,%f%%,%f\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,100,PolePairs);
+	//处理数据并记录剔除小数约0.2-0.8的数据，因为不对,7.1是7对极,7.4?不可信
+	//6.8+0.2=7>6  -6.8+0.2=-6.6<6 -7.1+0.2>-7		-6.80-0.2=-7<-6		7.1-0.2=-6<7
+	if(PolePairs<0)
+	{
+		PolePairs=-PolePairs;
+		Symbol=-1;
+	}
+	if(PolePairs>0)
+	{
+		if((char)(PolePairs+0.21f)>(char)PolePairs)
+			MotorParm.MOTOR_POLE_PAIRS=(unsigned char)(PolePairs+0.2f);
+		else if((char)(PolePairs-0.21f)<(char)PolePairs)
+			MotorParm.MOTOR_POLE_PAIRS=(unsigned char)(PolePairs);
+		else 
+			return -1;
+		if(Symbol==-1)
+			MotorParm.MOTOR_ENCODER_DIR=(char)-1U;
+		else
+			MotorParm.MOTOR_ENCODER_DIR=1;
+	}
+	FOC_SetOpenLoopVector(a,0.2);//转子先吸合1s;
+	HAL_Delay(1000);
+	//稳定，读取电角度零值对应机械位置
+	MotorParm.ELECTRICAL_OFFSET=-((float)MotorParm.FOC_encoder_raw/MT6816_CPR*FOC_2PI*MotorParm.MOTOR_ENCODER_DIR*MotorParm.MOTOR_POLE_PAIRS);
+	return MotorParm.MOTOR_POLE_PAIRS;
+}
+
+//电感电阻计算
+
+void InductorAndRS_Check()
+{
+	uint32_t arr;
+	//第1步测量相电阻，母线12V,给3V,25%占空比（实际是有50%占空比偏置，故+3V为75%占空比）
+	arr = __HAL_TIM_GET_AUTORELOAD(&htim1)+1U;
+	__HAL_TIM_SET_COMPARE( &htim1, 	TIM_CHANNEL_1,arr/2);
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_2,arr/2);
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_3,arr/2);
+	HAL_Delay(100);
+	usb_print("%f,%f,%f,%f\r\n",ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,MotorParm.Rs);
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_1,(uint32_t)(0.75 * (float)arr) );
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_2,arr/2);
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_3,arr/2);
+	HAL_Delay(1000);//等待1s
+	//R=V/I，此处I单位为mA
+	MotorParm.Rs=(float)(3*1000/MotorParm.ADC_Parm.I_a);
+	usb_print("%f,%f,%f,%f\r\n",ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,MotorParm.Rs);
+	__HAL_TIM_SET_COMPARE( &htim1, 	TIM_CHANNEL_1,arr/2);
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_2,arr/2);
+	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_3,arr/2);	
+	HAL_Delay(1000);//等待1s
+	
+	
+	//测量相电感，方法强吸合1s（让定子到位），弱吸合500ms（防止定子松动同时降低电流），再给脉冲用粗略计算 Ld=Vd*dt/dI,(时间太短置标注位给ADC中断处理)
+	
+	FOC_SetOpenLoopVector(0,0.2);
+	HAL_Delay(1000);//等待1s
+	FOC_SetOpenLoopVector(0,0.05);
+	HAL_Delay(500);//等待1s
+	//置位待ADC完成任务返回
+	//while()
+	
+	//float V_alpha, V_beta;
+	//FOC_InvPark(2,0,0,&V_alpha,&V_beta);//d轴给电压
+	
+	
+}
+/* =========================================================
+ * 紧急停止
+ * ========================================================= */
+
+void FOC_PolePairDetect_Abort(PPDetect_t *detect)
+{
+    FOC_PWM_Stop();
+
+    detect->state = PP_DETECT_ABORT;
+}
+
+
+/* =========================================================
+ * 电流保护
+ * 用真实 Ia/Ib 后，在 ADC ISR 中调用。
+ * ========================================================= */
+
+uint8_t FOC_PolePairDetect_CurrentProtect(  PPDetect_t *detect,  float ia, float ib,  float current_limit)
+{
+    if((fabsf(ia) > current_limit) ||(fabsf(ib) > current_limit))
+    {
+        FOC_PolePairDetect_Abort(detect);
+        return 1;
+    }
+
+    return 0;
+}
+
+
+
+#include <math.h>
+#include <stdint.h>
+
+/*****************************************************************电流环*************************************************************************************
+*/
+float I_alpha = 0.0f;
+float I_beta  = 0.0f;
+
+float I_d = 0.0f;
+float I_q = 0.0f;
+
+float theta_m = 0.0f;
+float theta_e = 0.0f;//电角度
+
+
+#define FOC_DT 0.00005f	//时间周期50us
+//角度归一化0-360（0-2PI）
+float FOC_WrapAngle(float angle)
+{
+    while(angle >= FOC_2PI)
+        angle -= FOC_2PI;
+    while(angle < 0.0f)
+        angle += FOC_2PI;
+    return angle;
+}
+
+
+#define MT6816_LUT_ENABLE  0	//1LUT补偿
+
+void FOC_UpdateElectricalAngle(void)
+{
+    float encoder_used;
+
+    MotorParm.FOC_encoder_raw = MT6816_ReadOneAngle();
+
+#if MT6816_LUT_ENABLE
+
+    encoder_used =
+        Encoder_GetCorrectedRaw(MotorParm.FOC_encoder_raw);
+
+#else
+
+    encoder_used =
+        (float)MotorParm.FOC_encoder_raw;
+
+#endif
+
+    theta_m =encoder_used *FOC_2PI /(float)MT6816_CPR;
+
+    theta_e = MotorParm.MOTOR_ENCODER_DIR * MotorParm.MOTOR_POLE_PAIRS *theta_m + MotorParm.ELECTRICAL_OFFSET;
+
+    theta_e = FOC_WrapAngle(theta_e);
 }
 
 /***************************************/
@@ -1115,65 +511,6 @@ float FOC_PI_Run1( FOC_PI_t *pi, float target, float feedback, float dt)
     output =pi->kp * error +pi->integral;
     output =FOC_Limit(output,pi->out_min,pi->out_max);
     return output;
-}
-void FOC_SPWM(float alpha, float beta)
-{
-    float va;
-    float vb;
-    float vc;
-
-    float duty_a;
-    float duty_b;
-    float duty_c;
-
-    uint32_t arr;
-
-    /*
-     * alpha/beta -> abc
-     */
-    va = alpha;
-
-    vb = -0.5f * alpha  + 0.8660254038f * beta;
-
-    vc = -0.5f * alpha- 0.8660254038f * beta;
-
-
-    /*
-     * SPWM:
-     * 不做 vmax/vmin 零序注入
-     */
-    duty_a = 0.5f + va;
-    duty_b = 0.5f + vb;
-    duty_c = 0.5f + vc;
-
-
-    /*
-     * 防止超过合法 duty
-     */
-    duty_a = FOC_Limit(duty_a, 0.02f, 0.98f);
-    duty_b = FOC_Limit(duty_b, 0.02f, 0.98f);
-    duty_c = FOC_Limit(duty_c, 0.02f, 0.98f);
-
-
-    arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
-
-    __HAL_TIM_SET_COMPARE(
-        &htim1,
-        TIM_CHANNEL_1,
-        (uint32_t)(duty_a * (float)arr)
-    );
-
-    __HAL_TIM_SET_COMPARE(
-        &htim1,
-        TIM_CHANNEL_2,
-        (uint32_t)(duty_b * (float)arr)
-    );
-
-    __HAL_TIM_SET_COMPARE(
-        &htim1,
-        TIM_CHANNEL_3,
-        (uint32_t)(duty_c * (float)arr)
-    );
 }
 
 float Vd;
@@ -1310,7 +647,6 @@ float last_error_V2=0.0f;
 float FOC_SpeedLoop(float speed_ref)
 {
 		int16_t limit_i=1000;
-    float iq_ref;
 		if(speed_ref>1000||speed_ref<-1000)
 		{
 			Speed_PI.kp = 2.42f;//1.8f,

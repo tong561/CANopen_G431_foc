@@ -3,33 +3,9 @@
 
 #include "main.h"
 #include <stdint.h>
-
+#include "myADC.h"
 #define DRV8313_ENABLE() GPIOB->ODR|=(0x01<<11)
 #define DRV8313_DISABLE() GPIOB->ODR&=~(0x01<<11)
-/* ================= 测极对数参数 ================= */
-/*
- * 输出电压强度，单位是“PWM归一化幅值”
- * 第一次测试建议：
- * 0.01 ~ 0.02
- * 如果电机完全不动，可以慢慢增加到 0.03、0.04。
- * 在没有真正电流保护之前，不建议超过 0.05。
- */
-#define PP_DETECT_PWM_AMPLITUDE      0.2f
-/* 初始吸合时间 */
-#define PP_DETECT_ALIGN_TIME_MS      2000U
-/* 最后等待转子跟上 */
-#define PP_DETECT_END_WAIT_MS        1000U
-/* 开环角度更新时间 */
-#define PP_DETECT_UPDATE_TIME_MS     2U
-/*
- * 每次增加的电角度，单位 rad
- * 0.008rad / 2ms
- * ≈ 4rad/s
- * ≈ 0.637 电气圈/s
- */
-#define PP_DETECT_STEP_RAD           0.2f
-/* 测几个完整电周期 */
-#define PP_DETECT_ELEC_CYCLES        280U
 
 #define FOC_PI                       3.1415927f
 #define FOC_2PI                      6.2831853f
@@ -98,12 +74,33 @@ void FOC_PolePairDetect_Abort(PPDetect_t *detect);
 uint8_t FOC_PolePairDetect_CurrentProtect(PPDetect_t *detect,float ia,float ib,float current_limit);
 void FOC_StablePointTest(void);
 
+typedef struct MotorParameters
+{
+	
+	unsigned char MOTOR_POLE_PAIRS; //电机极对数
+	char MOTOR_ENCODER_DIR;	//电机旋转方向
+	float ELECTRICAL_OFFSET;//电角度零点对应机械角度
+	float VBUS;//母线电压，没adc所以固定12V；
+	float Lq;		//q轴电感
+	float	Ld;		//d轴电感
+	float Rs;		//相电阻
+	ADC_Type_t ADC_Parm;//ADC采样参数相电压电流
+	
+	float Vd;		//d轴电压
+	float Vq;		//q轴电压
+	float I_alpha;	//alpha轴电流 （克拉克变换）
+	float I_beta;		//beta轴电流
+	float I_d;			//d轴电流
+	float I_q;			//q轴电流
+	float theta_e;	//θe电角度
+	uint16_t FOC_encoder_raw;//电机编码器值
+}MotorParameters_t;
 
 
-
-#define MOTOR_POLE_PAIRS    7.0f
-#define MOTOR_ENCODER_DIR  (-1.0f)
-#define ELECTRICAL_OFFSET  5.78f//6.3f// 5.936242f
+//#define MOTOR_POLE_PAIRS    7.0f
+//#define MOTOR_ENCODER_DIR  (-1.0f)
+//#define MotorParm.ELECTRICAL_OFFSET  5.78f//6.3f// 5.936242f
+extern MotorParameters_t MotorParm;
 extern float Vd;
 extern float Vq;
 extern float error;
@@ -113,7 +110,6 @@ extern float I_d;
 extern float I_q;
 extern float theta_m;
 extern float theta_e;
-extern uint16_t FOC_encoder_raw;
 extern float Iq_ref;
 float FOC_WrapAngle(float angle);
 void FOC_UpdateElectricalAngle(void);
@@ -134,16 +130,11 @@ typedef struct
 
 } FOC_PI_t;
 
-
 extern FOC_PI_t PI_Id;
 extern FOC_PI_t PI_Iq;
 
 float FOC_PI_Run(FOC_PI_t *pi,float target,float feedback,float dt);
 float FOC_CurrentLoop(void);
-
-
-
-
 
 extern volatile float motor_speed_rpm ;
 extern volatile float motor_speed_rpm_filt ;
@@ -169,5 +160,5 @@ typedef struct
 extern POSPI_t POS_PI;
 
 
-void NumberOfPolePairs_Check();
+signed char NumberOfPolePairs_Check(unsigned char laps_numbles);
 #endif

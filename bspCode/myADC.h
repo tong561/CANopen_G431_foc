@@ -11,7 +11,7 @@ typedef struct ADC_Type
 	float I_b;//B项电流
 	float I_c;//C项电流
 
-	uint16_t buff_Ride_R;	 //采样电阻单位m欧(固定)*增益倍数（固定）
+	uint16_t buff_Ride_R;	 //(采样电阻单位m欧(固定)*增益倍数（固定）/1000)单位换算为MA
 }ADC_Type_t;
 
 extern ADC_Type_t ADC_parm;

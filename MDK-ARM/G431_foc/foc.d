@@ -1,5 +1,7 @@
 g431_foc\foc.o: ..\myCode\foc.c
-g431_foc\foc.o: ..\myCode\foc.h
+g431_foc\foc.o: ../bspCode/bspUSB.h
+g431_foc\foc.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdint.h
+g431_foc\foc.o: ../bspCode/myADC.h
 g431_foc\foc.o: ../Core/Inc/main.h
 g431_foc\foc.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h
 g431_foc\foc.o: ../Core/Inc/stm32g4xx_hal_conf.h
@@ -8,7 +10,6 @@ g431_foc\foc.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_def.h
 g431_foc\foc.o: ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h
 g431_foc\foc.o: ../Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g431xx.h
 g431_foc\foc.o: ../Drivers/CMSIS/Include/core_cm4.h
-g431_foc\foc.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdint.h
 g431_foc\foc.o: ../Drivers/CMSIS/Include/cmsis_version.h
 g431_foc\foc.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
 g431_foc\foc.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
@@ -42,8 +43,7 @@ g431_foc\foc.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h
 g431_foc\foc.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h
 g431_foc\foc.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h
 g431_foc\foc.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
-g431_foc\foc.o: ../bspCode/bspUSB.h
-g431_foc\foc.o: ../bspCode/myADC.h
+g431_foc\foc.o: ..\myCode\foc.h
 g431_foc\foc.o: ../Core/Inc/tim.h
 g431_foc\foc.o: ..\myCode\MT6816.h
 g431_foc\foc.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\math.h

@@ -90,9 +90,6 @@ void my_main(void)
 		/* ADC1 master 再启动 */
 		HAL_ADCEx_InjectedStart_IT(&hadc1);
 		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-	
-		
-		uint16_t MT6816_data=0;
 		
 		DRV8313_DISABLE();
 
@@ -118,7 +115,6 @@ void my_main(void)
 		DRV8313_ENABLE();//最后开驱动
 
 		FOC_RunFlag = 0;//允许闭环
-		uint8_t result_printed = 0;
 		uint16_t angle = MT6816_ReadOneAngle();
 		usb_print("angle=%u\r\n", angle);
 
@@ -131,9 +127,9 @@ char usb_flag=0;
 while(1)
 {
 	
-	 NumberOfPolePairs_Check();
+	 NumberOfPolePairs_Check(20);
 //	FOC_SetOpenLoopVector(a, 0.2f);
-	//usb_print("FOC_encoder_raw=%d,%f \r\n",FOC_encoder_raw,theta_e);
+	//usb_print("MotorParm.FOC_encoder_raw=%d,%f \r\n",MotorParm.FOC_encoder_raw,theta_e);
 //	a-=FOC_2PI/51600.0f;
 
 //	if(a>FOC_2PI)
@@ -160,7 +156,7 @@ while(1)
 		}
 //	whil
 //	usb_print("%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%f,%f,%f,%f,%f\r\n",
-//		FOC_encoder_raw,
+//		MotorParm.FOC_encoder_raw,
 //    theta_e,
 //    ADC_parm.I_a,
 //    ADC_parm.I_b,
@@ -215,7 +211,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	static uint32_t SUM_A ,SUM_B=10;//求偏置
 	static char InitOverFlag=0;
 	static unsigned char add_i,save_flag=0;
 	uint32_t start_CPU_CYC=0;
@@ -226,15 +221,15 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 				adc2_value = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
 				/* 读取编码器，计算电角度 */
 				FOC_UpdateElectricalAngle();
-				FOC_POSCalculate(FOC_encoder_raw);
+				FOC_POSCalculate(MotorParm.FOC_encoder_raw);
 				RUN_CYC=DWT->CYCCNT-start_CPU_CYC;
 				//FOC_SpeedLoop(400);
 					
-				if(!InitOverFlag)
+				if(!InitOverFlag)//初始化未完成
 				{
 					ADC_parm.V_a=adc1_value;
 					ADC_parm.V_b=adc2_value;
-					InitOverFlag=ADC_Init(&ADC_parm);
+					InitOverFlag=ADC_Init(&ADC_parm);//求偏置电压
 				}
 				else
 				{
@@ -278,7 +273,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 						save_flag=!save_flag;
 						if(sendArr_flag==0&&save_flag)
 						{
-							FOC_Pram[add_i].ch0.f	=(float)FOC_encoder_raw;
+							FOC_Pram[add_i].ch0.f	=(float)MotorParm.FOC_encoder_raw;
 							FOC_Pram[add_i].ch1.f	=(float)Iq_ref;
 							FOC_Pram[add_i].ch2.f	=(float)error_V;
 							FOC_Pram[add_i].ch3.f	=(float)motor_speed_rpm_filt;
@@ -295,7 +290,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 						else if(save_flag)
 						{
 							
-							FOC_Pram1[add_i].ch0.f	=(float)FOC_encoder_raw;
+							FOC_Pram1[add_i].ch0.f	=(float)MotorParm.FOC_encoder_raw;
 							FOC_Pram1[add_i].ch1.f	=(float)Iq_ref;
 							FOC_Pram1[add_i].ch2.f	=(float)error_V;
 							FOC_Pram1[add_i].ch3.f	=(float)motor_speed_rpm_filt;

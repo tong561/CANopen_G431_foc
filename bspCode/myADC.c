@@ -8,7 +8,7 @@ unsigned char ADC_Init(ADC_Type_t *ADC_parm)//初始化偏置电流
 {
 	static uint16_t add_i=0;
 	//50倍增益，10m欧
-	ADC_parm->buff_Ride_R=2;//50*10; a/500*1000=a*2
+	ADC_parm->buff_Ride_R=1;//50*10; a/500*1000=a*2 
 	
 	static uint64_t sum_a=0,sum_b=0;
 	if(add_i<2000)

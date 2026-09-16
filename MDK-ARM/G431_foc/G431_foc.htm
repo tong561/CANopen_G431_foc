@@ -3,7 +3,7 @@
 <title>Static Call Graph - [G431_foc\G431_foc.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image G431_foc\G431_foc.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Sun Sep 13 17:31:29 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Mon Sep 14 11:25:33 2026
 <BR><P>
 <H3>Maximum Stack Usage =        584 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -361,9 +361,9 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_llsr
 <LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_llsl
 </UL>
-<BR>[Called By]<UL><LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_SetConfig
-<LI><a href="#[18d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_core
+<BR>[Called By]<UL><LI><a href="#[18d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_core
 <LI><a href="#[194]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
+<LI><a href="#[149]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_SetConfig
 <LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Init
 </UL>
 
@@ -532,8 +532,8 @@ Global Symbols
 <P><STRONG><a name="[86]"></a>ADC_Disable</STRONG> (Thumb, 106 bytes, Stack size 16 bytes, stm32g4xx_hal_adc.o(i.ADC_Disable))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = ADC_Disable
 </UL>
-<BR>[Calls]<UL><LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LL_ADC_IsEnabled
-<LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LL_ADC_IsEnabled
 </UL>
 <BR>[Called By]<UL><LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_Calibration_Start
 </UL>
@@ -541,8 +541,8 @@ Global Symbols
 <P><STRONG><a name="[89]"></a>ADC_Enable</STRONG> (Thumb, 156 bytes, Stack size 24 bytes, stm32g4xx_hal_adc.o(i.ADC_Enable))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = ADC_Enable
 </UL>
-<BR>[Calls]<UL><LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LL_ADC_IsEnabled
-<LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<BR>[Calls]<UL><LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LL_ADC_IsEnabled
 </UL>
 <BR>[Called By]<UL><LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_InjectedStart_IT
 </UL>
@@ -733,7 +733,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[125]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_PeriodElapsedCallback
 </UL>
 
-<P><STRONG><a name="[a1]"></a>FOC_UpdateElectricalAngle</STRONG> (Thumb, 64 bytes, Stack size 8 bytes, foc.o(i.FOC_UpdateElectricalAngle))
+<P><STRONG><a name="[a1]"></a>FOC_UpdateElectricalAngle</STRONG> (Thumb, 82 bytes, Stack size 8 bytes, foc.o(i.FOC_UpdateElectricalAngle))
 <BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = FOC_UpdateElectricalAngle &rArr; MT6816_ReadOneAngle
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;FOC_WrapAngle
@@ -773,7 +773,7 @@ Global Symbols
 <LI><a href="#[14d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_ADC1_Init
 </UL>
 
-<P><STRONG><a name="[ac]"></a>HAL_ADCEx_InjectedConvCpltCallback</STRONG> (Thumb, 522 bytes, Stack size 48 bytes, my_mian.o(i.HAL_ADCEx_InjectedConvCpltCallback))
+<P><STRONG><a name="[ac]"></a>HAL_ADCEx_InjectedConvCpltCallback</STRONG> (Thumb, 528 bytes, Stack size 48 bytes, my_mian.o(i.HAL_ADCEx_InjectedConvCpltCallback))
 <BR><BR>[Stack]<UL><LI>Max Depth = 140<LI>Call Chain = HAL_ADCEx_InjectedConvCpltCallback &rArr; FOC_CurrentLoop &rArr; FOC_InvPark &rArr; __hardfp_sinf &rArr; __mathlib_rredf2
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_InjectedGetValue
@@ -1061,9 +1061,9 @@ Global Symbols
 <LI><a href="#[c1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCCEx_PeriphCLKConfig
 <LI><a href="#[113]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_OscConfig
 <LI><a href="#[111]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_ClockConfig
+<LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Enable
 <LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_Disable
-<LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[165]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
 <LI><a href="#[14a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_CheckIdleState
 </UL>
@@ -1377,15 +1377,15 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[116]"></a>HAL_SPI_ErrorCallback</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, stm32g4xx_hal_spi.o(i.HAL_SPI_ErrorCallback))
-<BR><BR>[Called By]<UL><LI><a href="#[114]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_SPI_IRQHandler
-<LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SPI_DMAAbortOnError
+<BR><BR>[Called By]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SPI_DMAAbortOnError
+<LI><a href="#[114]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_SPI_IRQHandler
 </UL>
 
 <P><STRONG><a name="[114]"></a>HAL_SPI_IRQHandler</STRONG> (Thumb, 246 bytes, Stack size 16 bytes, stm32g4xx_hal_spi.o(i.HAL_SPI_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = HAL_SPI_IRQHandler &rArr; HAL_DMA_Abort_IT
 </UL>
-<BR>[Calls]<UL><LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Abort_IT
-<LI><a href="#[116]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_SPI_ErrorCallback
+<BR>[Calls]<UL><LI><a href="#[116]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_SPI_ErrorCallback
+<LI><a href="#[115]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Abort_IT
 </UL>
 <BR>[Called By]<UL><LI><a href="#[43]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SPI1_IRQHandler
 </UL>
@@ -1848,8 +1848,8 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32g431xx.o(RESET)
 </UL>
-<P><STRONG><a name="[15f]"></a>NumberOfPolePairs_Check</STRONG> (Thumb, 370 bytes, Stack size 104 bytes, foc.o(i.NumberOfPolePairs_Check))
-<BR><BR>[Stack]<UL><LI>Max Depth = 200<LI>Call Chain = NumberOfPolePairs_Check &rArr; usb_print &rArr; CDC_Transmit_FS &rArr; USBD_CDC_TransmitPacket &rArr; USBD_LL_Transmit &rArr; HAL_PCD_EP_Transmit &rArr; USB_EPStartXfer &rArr; USB_WritePMA
+<P><STRONG><a name="[15f]"></a>NumberOfPolePairs_Check</STRONG> (Thumb, 594 bytes, Stack size 96 bytes, foc.o(i.NumberOfPolePairs_Check))
+<BR><BR>[Stack]<UL><LI>Max Depth = 192<LI>Call Chain = NumberOfPolePairs_Check &rArr; usb_print &rArr; CDC_Transmit_FS &rArr; USBD_CDC_TransmitPacket &rArr; USBD_LL_Transmit &rArr; HAL_PCD_EP_Transmit &rArr; USB_EPStartXfer &rArr; USB_WritePMA
 </UL>
 <BR>[Calls]<UL><LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[161]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;usb_print
@@ -2555,14 +2555,14 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
-<P><STRONG><a name="[199]"></a>my_main</STRONG> (Thumb, 244 bytes, Stack size 8 bytes, my_mian.o(i.my_main))
+<P><STRONG><a name="[199]"></a>my_main</STRONG> (Thumb, 246 bytes, Stack size 8 bytes, my_mian.o(i.my_main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 584<LI>Call Chain = my_main &rArr; uart_printf &rArr; uart_buf_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
+<BR>[Calls]<UL><LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_InjectedStart_IT
+<LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_Calibration_Start
+<LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_PWM_Start
 <LI><a href="#[19a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_Base_Start_IT
-<LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_InjectedStart_IT
-<LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ADCEx_Calibration_Start
 <LI><a href="#[161]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;usb_print
 <LI><a href="#[19c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_send_periodic_task
 <LI><a href="#[19b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart_printf
