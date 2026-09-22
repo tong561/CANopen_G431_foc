@@ -51,7 +51,7 @@ typedef struct
      * 可用于判断编码器方向和三相旋转方向关系
      */
     int8_t direction;
-
+	
 } PPDetect_t;
 
 
@@ -78,7 +78,7 @@ typedef struct MotorParameters
 {
 	
 	unsigned char MOTOR_POLE_PAIRS; //电机极对数
-	char MOTOR_ENCODER_DIR;	//电机旋转方向
+	signed char MOTOR_ENCODER_DIR;	//电机旋转方向
 	float ELECTRICAL_OFFSET;//电角度零点对应机械角度
 	float VBUS;//母线电压，没adc所以固定12V；
 	float Lq;		//q轴电感
@@ -94,6 +94,10 @@ typedef struct MotorParameters
 	float I_q;			//q轴电流
 	float theta_e;	//θe电角度
 	uint16_t FOC_encoder_raw;//电机编码器值
+	char open_L_check_flag;
+	char open_Lq_check_flag;
+	float	L_check_I_q;
+	float	L_check_I_d;
 }MotorParameters_t;
 
 
@@ -161,4 +165,8 @@ extern POSPI_t POS_PI;
 
 
 signed char NumberOfPolePairs_Check(unsigned char laps_numbles);
+void InductorAndRS_Check();
+
+/* 直接在dq坐标系给电压，vd/vq仍然使用你当前的标幺值 */
+void FOC_SetDQVoltage(float vd, float vq, float theta);
 #endif

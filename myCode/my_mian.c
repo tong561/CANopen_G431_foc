@@ -114,7 +114,7 @@ void my_main(void)
 		FOC_PWM_Start();//开PWM
 		DRV8313_ENABLE();//最后开驱动
 
-		FOC_RunFlag = 0;//允许闭环
+		FOC_RunFlag = 1;//允许闭环
 		uint16_t angle = MT6816_ReadOneAngle();
 		usb_print("angle=%u\r\n", angle);
 
@@ -127,7 +127,8 @@ char usb_flag=0;
 while(1)
 {
 	
-	 NumberOfPolePairs_Check(20);
+	 //NumberOfPolePairs_Check(20);
+	// InductorAndRS_Check();
 //	FOC_SetOpenLoopVector(a, 0.2f);
 	//usb_print("MotorParm.FOC_encoder_raw=%d,%f \r\n",MotorParm.FOC_encoder_raw,theta_e);
 //	a-=FOC_2PI/51600.0f;
@@ -190,13 +191,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			add_i++;
 			if(add_i>1000)
 			{
-				FOC_SpeedLoop(-2000);
+				FOC_SpeedLoop(-500);
 				if(add_i>2000)
 					add_i=0;
 			}
 			else
 			{
-				FOC_SpeedLoop(2000);
+				FOC_SpeedLoop(500);
 			}
       // canopen_app_interrupt();
 			
@@ -212,7 +213,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	static char InitOverFlag=0;
-	static unsigned char add_i,save_flag=0;
+	static unsigned char add_i,save_flag=0,Check_L_flag=0,Check_Lq_flag=0;
 	uint32_t start_CPU_CYC=0;
     if (hadc->Instance == ADC1) {
 				CPU_CycleCounter_Init();
@@ -227,14 +228,14 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 					
 				if(!InitOverFlag)//初始化未完成
 				{
-					ADC_parm.V_a=adc1_value;
-					ADC_parm.V_b=adc2_value;
+					ADC_parm.V_b=adc1_value;
+					ADC_parm.V_a=adc2_value;
 					InitOverFlag=ADC_Init(&ADC_parm);//求偏置电压
 				}
 				else
 				{
-					ADC_parm.V_a=adc1_value-ADC_parm.offset_a;
-					ADC_parm.V_b=adc2_value-ADC_parm.offset_b;
+					ADC_parm.V_b=adc1_value-ADC_parm.offset_b;
+					ADC_parm.V_a=adc2_value-ADC_parm.offset_a;
 					// 转换为电流值
 					CurrentCalculation(&ADC_parm);
 					/* ==========================
@@ -248,6 +249,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 							 (ADC_parm.I_c >  CURRENT_LIMIT_MA) ||
 							 (ADC_parm.I_c < -CURRENT_LIMIT_MA))
 						{
+							
 								FOC_RunFlag = 0;
 								OverCurrentFlag = 1;
 
@@ -264,7 +266,105 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 						/* Park */
 						FOC_Park(I_alpha,I_beta,theta_e);
-						
+						/*
+ * 电感测量状态机
+ *
+ * Check_L_flag = 0：
+ *     保存电压阶跃之前的 Id/Iq
+ *     0.05 -> 0.30
+ *
+ * Check_L_flag = 1：
+ *     下一次ADC采样保存阶跃后的 Id/Iq
+ *     恢复到0.05
+ *     通知主程序计算电感
+ */
+if(MotorParm.open_L_check_flag)
+{
+    static float L_Id_start = 0.0f;
+    static float L_Iq_start = 0.0f;
+
+    if(Check_L_flag == 0)
+    {
+        /*
+         * 此时PWM已经稳定在0.05，
+         * 先保存阶跃之前的电流。
+         */
+        L_Id_start = I_d;
+        L_Iq_start = I_q;
+
+        /*
+         * 产生电压阶跃：
+         * 0.05 -> 0.30
+         */
+        FOC_SetOpenLoopVector(0.0f, 0.30f);
+
+        Check_L_flag = 1;
+    }
+    else
+    {
+        /*
+         * 下一次ADC采样，
+         * 记录阶跃后的电流。
+         */
+        MotorParm.L_check_I_d = I_d - L_Id_start;
+        MotorParm.L_check_I_q = I_q - L_Iq_start;
+
+        /*
+         * 恢复到小保持电压，
+         * 避免转子立即松开。
+         */
+        FOC_SetOpenLoopVector(0.0f, 0.05f);
+
+        /*
+         * 一次测试结束。
+         * 非常重要：状态必须复位为0。
+         */
+        Check_L_flag = 0;
+        MotorParm.open_L_check_flag = 0;
+    }
+}
+
+static float Iq_start = 0.0f;
+
+if(MotorParm.open_Lq_check_flag)
+{
+    if(Check_Lq_flag == 0)
+    {
+        /* 保存脉冲前 Iq */
+        Iq_start = I_q;
+
+        /*
+         * 保持d轴0.05不变，
+         * q轴从0突变到0.25
+         *
+         * ΔVq = 0.25 * 12V = 3V
+         */
+        FOC_SetDQVoltage(
+            0.05f,
+            0.25f,
+            theta_e
+        );
+
+        Check_Lq_flag = 1;
+    }
+    else
+    {
+        /* 一个ADC周期（当前按50us）后的Iq */
+        MotorParm.L_check_I_q =
+            I_q - Iq_start;
+
+        /* 撤掉q轴脉冲，只保留d轴锁定 */
+        FOC_SetDQVoltage(
+            0.05f,
+            0.0f,
+            theta_e
+        );
+
+        Check_Lq_flag = 0;
+        MotorParm.open_Lq_check_flag = 0;
+    }
+}
+
 						if(FOC_RunFlag && !OverCurrentFlag)
 						{
 								
