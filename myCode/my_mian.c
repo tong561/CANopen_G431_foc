@@ -189,15 +189,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     {
 			FOC_SpeedCalculate(POS_PI.pos);
 			add_i++;
-			if(add_i>1000)
+			if(add_i>3000)
 			{
-				FOC_SpeedLoop(-500);
-				if(add_i>2000)
+				FOC_SpeedLoop(-100);
+				if(add_i>6000)
 					add_i=0;
 			}
 			else
 			{
-				FOC_SpeedLoop(500);
+				FOC_SpeedLoop(100);
 			}
       // canopen_app_interrupt();
 			

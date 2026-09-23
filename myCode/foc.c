@@ -73,7 +73,10 @@ MotorParameters_t MotorParm=
 	.open_L_check_flag=0,
 	.open_Lq_check_flag=0,
 	.Ld = 1.248f,
-	.Lq = 1.462f
+	.Lq = 1.462f,
+	.J=3e-5,
+	.Kt= 0.0478f,
+	.B=1.0e-5f
 };
 	
 
@@ -855,7 +858,7 @@ float FOC_CurrentLoop(void)
 //}
 //速度环
 #define ENCODER_CPR    16384
-#define SPEED_DT       0.005f       //1ms
+#define SPEED_DT       0.001f       //1ms
 
 volatile float motor_speed_rpm = 0.0f;
 volatile float motor_speed_rpm_filt = 0.0f;
@@ -909,9 +912,76 @@ typedef struct
     float out_limit;
 } SpeedPI_t;
 
+/****
+J = 3e-5 kg*m2
+Kt = 0.0478 Nm/A
+
+
+*****/
+float Speed_FeedForward(float speed_rpm,  float accel_rpm_s)
+{
+    float omega;
+    float alpha;
+    float torque;
+    float iq_ff;
+    /*
+     * rpm转换为rad/s
+     */
+    omega =speed_rpm * 2.0f * FOC_PI / 60.0f;
+    /*
+     * rpm/s转换为rad/s2
+     */
+    alpha = accel_rpm_s *  2.0f * FOC_PI /60.0f;
+    /*
+     * 机械转矩
+     */
+    torque = MotorParm.J * alpha +  MotorParm.B * omega;
+    /*
+     * 转矩转换Iq
+     */
+    iq_ff = torque / MotorParm.Kt;
+    /*
+     * A转换mA
+     */
+    return iq_ff * 1000.0f;
+}
+
+/*
+ * 低速摩擦转矩补偿
+ *
+ * speed_rpm:
+ *     目标速度
+ *
+ * 返回:
+ *     mA
+ */
+float Speed_Friction_FeedForward(float speed_rpm)
+{
+    float iq_ff = 0.0f;
+
+    /*
+     * 正反转方向
+     */
+    if(speed_rpm > 5.0f)
+    {
+        /*
+         * 正转低速补偿
+         */
+        iq_ff = -60.0f;
+    }
+    else if(speed_rpm < -5.0f)
+    {
+        /*
+         * 反转低速补偿
+         */
+        iq_ff = 60.0f;
+    }
+
+    return iq_ff;
+}
 SpeedPI_t Speed_PI = {
-    .kp = 0.25f,//1.8f,
-    .ki = 0.9f,
+    .kp = 1.0f,//1.8f,
+    .ki = 0.1f,
 		.kd =0.0f,// 6.1f,
     .integral = 0.0f,
     .out_limit = 1500.0f
@@ -921,7 +991,7 @@ float last_error_V=0.0f;
 float last_error_V2=0.0f;
 float FOC_SpeedLoop(float speed_ref)
 {
-		int16_t limit_i=400;
+		int16_t limit_i=2000;
 //		if(speed_ref>1000||speed_ref<-1000)
 //		{
 //			Speed_PI.kp = 2.42f;//1.8f,
@@ -940,7 +1010,7 @@ float FOC_SpeedLoop(float speed_ref)
 			Speed_PI.integral=-limit_i;
 		}
     Iq_ref=Speed_PI.kp * error_V+Speed_PI.integral+
-					 Speed_PI.kd	*	(error_V-last_error_V);
+					 Speed_PI.kd	*	(error_V-last_error_V)+Speed_Friction_FeedForward(speed_ref);
     if(Iq_ref > Speed_PI.out_limit)
         Iq_ref = Speed_PI.out_limit;
 

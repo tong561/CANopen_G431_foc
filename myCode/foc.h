@@ -98,6 +98,9 @@ typedef struct MotorParameters
 	char open_Lq_check_flag;
 	float	L_check_I_q;
 	float	L_check_I_d;
+	float J;
+	float Kt ;
+	float B;
 }MotorParameters_t;
 
 
