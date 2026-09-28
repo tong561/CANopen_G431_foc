@@ -17,7 +17,7 @@
 																			│
 																			▼
 													┌──────────┐
-		Encoder ──θe───	│				 Park  		  │
+		Encoder ──θe───	│				 Park  		 │
 													└────┬─────┘
 																		│
 																	Id Iq
@@ -66,13 +66,13 @@
 //初始化全局变量
 MotorParameters_t MotorParm=
 {
-	.MOTOR_POLE_PAIRS=7,
-	.VBUS=12,
-	.ELECTRICAL_OFFSET=-5.768919f,
-	.MOTOR_ENCODER_DIR=-1,
+	.MOTOR_POLE_PAIRS=7,//七对极
+	.VBUS=12,						//母线12V
+	.ELECTRICAL_OFFSET=-5.768919f,//电角度0点偏差
+	.MOTOR_ENCODER_DIR=-1,//旋转方向
 	.open_L_check_flag=0,
 	.open_Lq_check_flag=0,
-	.Ld = 1.248f,
+	.Ld = 1.248f,	//测量d轴电感1.248mh
 	.Lq = 1.462f,
 	.J=3e-5,
 	.Kt= 0.0478f,
@@ -180,9 +180,9 @@ void FOC_SPWM(float alpha, float beta)
 	___|			 |___								 |_______|	
 	*/
     arr = __HAL_TIM_GET_AUTORELOAD(&htim1);
-    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_1,(uint32_t)(duty_a * (float)arr) );
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_1,(uint32_t)(duty_a * (float)arr));
     __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_2,(uint32_t)(duty_b * (float)arr));
-    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr) );
+    __HAL_TIM_SET_COMPARE( &htim1,TIM_CHANNEL_3,(uint32_t)(duty_c * (float)arr));
 }
 /*************************************
 SVPWM算法：电压马鞍波
@@ -275,7 +275,9 @@ void FOC_SetOpenLoopVector(float electrical_angle, float amplitude)
 
 /*
 极对数检测 转子吸合-》记录开始POS-》转子运动-》记录结束POS-》计数极对数-》吸合-》计数电角度偏移
-
+函数名： NumberOfPolePairs_Check
+参数： laps_numble 检测时转多少电角度圈数
+功能：测量极对数，电机旋转方向，电角度偏移量
 */
 signed char NumberOfPolePairs_Check(unsigned char laps_numble)
 {
@@ -311,26 +313,30 @@ signed char NumberOfPolePairs_Check(unsigned char laps_numble)
 	if(PolePairs>0)
 	{
 		if((char)(PolePairs+0.21f)>(char)PolePairs)
-			MotorParm.MOTOR_POLE_PAIRS=(unsigned char)(PolePairs+0.2f);
+			MotorParm.MOTOR_POLE_PAIRS=(unsigned char)(PolePairs+0.2f);//存储电机极对数
 		else if((char)(PolePairs-0.21f)<(char)PolePairs)
-			MotorParm.MOTOR_POLE_PAIRS=(unsigned char)(PolePairs);
+			MotorParm.MOTOR_POLE_PAIRS=(unsigned char)(PolePairs);//存储电机极对数
 		else 
 			return -1;
 		if(Symbol==-1)
-			MotorParm.MOTOR_ENCODER_DIR=(signed char)-1U;
+			MotorParm.MOTOR_ENCODER_DIR=(signed char)-1U;//存储电机方向
 		else
-			MotorParm.MOTOR_ENCODER_DIR=1;
+			MotorParm.MOTOR_ENCODER_DIR=1;//存储电机方向
 	}
 	FOC_SetOpenLoopVector(a,0.2);//转子先吸合1s;
 	HAL_Delay(1000);
 	//稳定，读取电角度零值对应机械位置
+	//存储电机0点偏移量
 	MotorParm.ELECTRICAL_OFFSET=-((float)MotorParm.FOC_encoder_raw/MT6816_CPR*FOC_2PI*MotorParm.MOTOR_ENCODER_DIR*MotorParm.MOTOR_POLE_PAIRS);
 	usb_print("ELECTRICAL_OFFSET:%f\r\n",MotorParm.ELECTRICAL_OFFSET);
 	return MotorParm.MOTOR_POLE_PAIRS;
 }
 
 
-/* 直接在dq坐标系给电压，vd/vq仍然使用你当前的标幺值 */
+/* 
+直接在dq坐标系给电压，vd/vq仍然使用当前的标值
+
+*/
 void FOC_SetDQVoltage(float vd, float vq, float theta)
 {
     float v_alpha;
@@ -339,7 +345,12 @@ void FOC_SetDQVoltage(float vd, float vq, float theta)
     FOC_InvPark(vd, vq, theta, &v_alpha, &v_beta);
     FOC_SVPWM(v_alpha, v_beta);
 }
-//电感电阻计算
+/*
+函数名：InductorAndRS_Check
+功能：测量相电阻，d q轴电感
+
+
+*/
 
 void InductorAndRS_Check()
 {
@@ -376,27 +387,6 @@ void InductorAndRS_Check()
 	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_2,arr/2);
 	__HAL_TIM_SET_COMPARE( &htim1,	TIM_CHANNEL_3,arr/2);	
 	HAL_Delay(1000);//等待1s
-	
-	
-	//测量相电感，方法强吸合1s（让定子到位），弱吸合500ms（防止定子松动同时降低电流），再给脉冲用粗略计算 Ld=Vd*dt/dI,(时间太短置标注位给ADC中断处理)
-//	
-//	FOC_SetOpenLoopVector(0,0.2);
-//	HAL_Delay(1000);//等待1s
-//	FOC_SetOpenLoopVector(0,0.05);
-//	HAL_Delay(500);//等待1s
-//	//置位待ADC完成任务返回
-//	MotorParm.open_L_check_flag=1;
-//	float IQ_start,ID_start;
-//	IQ_start=I_q;
-//	ID_start=I_d;
-//	while(MotorParm.open_L_check_flag)
-//	{
-//		usb_print("%d\r\n",MotorParm.open_L_check_flag);
-//	}
-//	HAL_Delay(100);
-//	usb_print("%f,%f    OK\r\n",900.0f*(MotorParm.L_check_I_d-ID_start)/0.0005f,900.0f*(MotorParm.L_check_I_q-IQ_start)/0.0005f);
-	//float V_alpha, V_beta;
-	//FOC_InvPark(2,0,0,&V_alpha,&V_beta);//d轴给电压
 	/*
  * ============================
  * 测量 d 轴电感 Ld
@@ -409,171 +399,153 @@ void InductorAndRS_Check()
  * 4. 一个ADC周期后测量 ΔId
  */
 
-FOC_SetOpenLoopVector(0.0f, 0.20f);
-HAL_Delay(1000);
+	FOC_SetOpenLoopVector(0.0f, 0.20f);
+	HAL_Delay(1000);
 
-/* 保持转子，同时降低稳态电流 */
-FOC_SetOpenLoopVector(0.0f, 0.05f);
-HAL_Delay(500);
+	/* 保持转子，同时降低稳态电流 */
+	FOC_SetOpenLoopVector(0.0f, 0.05f);
+	HAL_Delay(500);
 
-/* 启动ADC中断中的电感测量状态机 */
-MotorParm.open_L_check_flag = 1;
+	/* 启动ADC中断中的电感测量状态机 */
+	MotorParm.open_L_check_flag = 1;
 
-/* 等待ADC完成一个阶跃测试 */
-while(MotorParm.open_L_check_flag)
-{
-    usb_print("OKOK");
-}
-
-
-/*
- * 你的SVPWM中：
- *
- * alpha/beta标幺值直接对应 Vbus。
- *
- * 0.05 -> 0.30
- *
- * ΔV = (0.30 - 0.05) * 12V
- *    = 3.0V
- */
-float delta_V =(0.30f - 0.05f) * MotorParm.VBUS;
+	/* 等待ADC完成一个阶跃测试 */
+	while(MotorParm.open_L_check_flag)
+	{
+			usb_print("OKOK");
+	}
 
 
-/*
- * 当前foc.c里面定义：
- *
- * FOC_DT = 0.00005f
- *
- * 即50us。
- *
- * 这里暂时按ADC中断实际也是50us处理。
- */
-float delta_t = 0.00005f;
+	/*
+	 * SVPWM中：
+	 *
+	 * alpha/beta标值直接对应 Vbus。
+	 *
+	 * 0.05 -> 0.30
+	 *
+	 * ΔV = (0.30 - 0.05) * 12V
+	 *    = 3.0V
+	 */
+	float delta_V =(0.30f - 0.05f) * MotorParm.VBUS;
 
 
-/*
- * L_check_I_d现在已经是：
- *
- * ΔId = Id_after - Id_before
- *
- * 单位还是 mA
- */
-float delta_Id_mA = MotorParm.L_check_I_d;
+	/*
+	 * 当前foc.c里面定义：
+	 *
+	 * FOC_DT = 0.00005f
+	 *
+	 * 即50us。
+	 *
+	 * 这里暂时按ADC中断实际也是50us处理。
+	 */
+	float delta_t = 0.00005f;
 
 
-/*
- * 电流变化必须足够大，
- * 否则噪声会让计算结果失真。
- */
-if(fabsf(delta_Id_mA) > 5.0f)
-{
-    /*
-     * L = ΔV * Δt / ΔI
-     *
-     * Id单位是mA，
-     * 所以乘0.001转换成A。
-     *
-     * 最终MotorParm.Ld单位：H
-     */
-    MotorParm.Ld = fabsf(delta_V * delta_t /(delta_Id_mA * 0.001f) );
-		HAL_Delay(100);
-    usb_print( "dV=%f V, dt=%f us, dId=%f mA, Ld=%f mH\r\n", 
-				delta_V,
-        delta_t * 1000000.0f,
-        delta_Id_mA,
-        MotorParm.Ld * 1000.0f
-    );
-}
-else
-{
-    MotorParm.Ld = 0.0f;
-		HAL_Delay(100);
-    usb_print(
-        "Ld test failed: dId too small = %f mA\r\n",
-        delta_Id_mA
-    );
-}
-
-
-/* 测量结束，撤掉开环电压 */
-FOC_SetOpenLoopVector(0.0f, 0.0f);
-
-HAL_Delay(100);
-	
+	/*
+	 * L_check_I_d现在已经是：
+	 *
+	 * ΔId = Id_after - Id_before
+	 *
+	 * 单位还是 mA
+	 */
+	float delta_Id_mA = MotorParm.L_check_I_d;
+	/*
+	 * 电流变化必须足够大，
+	 * 否则噪声会让计算结果失真。
+	 */
+	if(fabsf(delta_Id_mA) > 5.0f)
+	{
+			/*
+			 * L = ΔV * Δt / ΔI
+			 * Id单位是mA，所以乘0.001转换成A。
+			 * 最终MotorParm.Ld单位：H
+			 */
+			MotorParm.Ld = fabsf(delta_V * delta_t /(delta_Id_mA * 0.001f) );
+			HAL_Delay(100);
+			usb_print( "dV=%f V, dt=%f us, dId=%f mA, Ld=%f mH\r\n", 
+					delta_V,
+					delta_t * 1000000.0f,
+					delta_Id_mA,
+					MotorParm.Ld * 1000.0f
+			);
+	}
+	else
+	{
+			MotorParm.Ld = 0.0f;
+			HAL_Delay(100);
+			usb_print(	"Ld test failed: dId too small = %f mA\r\n",delta_Id_mA);
+	}
+	/* 测量结束，撤掉开环电压 */
+	FOC_SetOpenLoopVector(0.0f, 0.0f);
+	HAL_Delay(100);
+		
 
 /* =========================================================
  * 测量 Lq
  * ========================================================= */
+	/*
+	 * 重新加强一次d轴对齐，保证转子位置稳定
+	 */
+	FOC_SetOpenLoopVector(0.0f, 0.20f);
+	HAL_Delay(500);
 
-/*
- * 重新加强一次d轴对齐，保证转子位置稳定
- */
-FOC_SetOpenLoopVector(0.0f, 0.20f);
-HAL_Delay(500);
-
-/*
- * 降到小d轴保持电压
- *
- * 此时：
- * Vd = 0.05
- * Vq = 0
- */
-FOC_SetOpenLoopVector(0.0f, 0.05f);
-HAL_Delay(300);
-
-
-/*
- * 启动q轴电感测量
- *
- * ADC中断会执行：
- *
- * Vd = 0.05
- * Vq = 0
- *
- *        ↓
- *
- * Vd = 0.05
- * Vq = 0.25
- *
- * 下一次ADC得到 ΔIq
- */
-MotorParm.open_Lq_check_flag = 1;
+	/*
+	 * 降到小d轴保持电压
+	 *
+	 * 此时：
+	 * Vd = 0.05
+	 * Vq = 0
+	 */
+	FOC_SetOpenLoopVector(0.0f, 0.05f);
+	HAL_Delay(300);
 
 
-/* 等待ADC状态机完成 */
-while(MotorParm.open_Lq_check_flag)
-{
-  usb_print("OKOK");
-}
+	/*
+	 * 启动q轴电感测量
+	 * ADC中断会执行：
+	 * Vd = 0.05
+	 * Vq = 0
+	 *        ↓
+	 *
+	 * Vd = 0.05
+	 * Vq = 0.25
+	 * 下一次ADC得到 ΔIq
+	 */
+	MotorParm.open_Lq_check_flag = 1;
+	/* 等待ADC状态机完成 */
+	while(MotorParm.open_Lq_check_flag)
+	{
+		usb_print("OKOK");
+	}
 
 
-/*
- * q轴电压变化量
- *
- * Vq:
- * 0 -> 0.25
- *
- * VBUS = 12V时：
- * ΔVq = 0.25 * 12 = 3V
- */
-float delta_Vq =0.25f * MotorParm.VBUS;
+	/*
+	 * q轴电压变化量
+	 *
+	 * Vq:
+	 * 0 -> 0.25
+	 *
+	 * VBUS = 12V时：
+	 * ΔVq = 0.25 * 12 = 3V
+	 */
+	float delta_Vq =0.25f * MotorParm.VBUS;
 
 
-/*
- * 当前测试一个ADC周期
- * 你目前按50us使用
- */
-float delta_t_q = 50.0e-6f;
+	/*
+	 * 当前测试一个ADC周期
+	 * 你目前按50us使用
+	 */
+	float delta_t_q = 50.0e-6f;
 
 
-/*
- * ADC中断已经计算：
- *
- * ΔIq = Iq_after - Iq_before
- *
- * 单位：mA
- */
-float delta_Iq_mA = MotorParm.L_check_I_q;
+	/*
+	 * ADC中断已经计算：
+	 *
+	 * ΔIq = Iq_after - Iq_before
+	 *
+	 * 单位：mA
+	 */
+	float delta_Iq_mA = MotorParm.L_check_I_q;
 
 
 /*
@@ -612,39 +584,31 @@ if(fabsf(delta_Iq_mA) > 5.0f)
     {
         MotorParm.Lq = -Rs * delta_t_q / logf(k);
 				HAL_Delay(100);
-        usb_print(
-            "dVq=%f V, dt=%f us, dIq=%f mA, Lq=%f mH\r\n",
-            delta_Vq,
-            delta_t_q * 1000000.0f,
-            delta_Iq_mA,
-            MotorParm.Lq * 1000.0f
+        usb_print("dVq=%f V, dt=%f us, dIq=%f mA, Lq=%f mH\r\n",
+            delta_Vq, delta_t_q * 1000000.0f,delta_Iq_mA,MotorParm.Lq * 1000.0f
         );
     }
     else
     {
         MotorParm.Lq = 0.0f;
 				HAL_Delay(100);
-        usb_print(
-            "Lq calc failed: k=%f, dIq=%f mA\r\n",
-            k,
-            delta_Iq_mA
-        );
+        usb_print("Lq calc failed: k=%f, dIq=%f mA\r\n", k, delta_Iq_mA);
     }
-}
-else
-{
-    MotorParm.Lq = 0.0f;
-		HAL_Delay(100);
-    usb_print( "Lq test failed: dIq too small=%f mA\r\n",   delta_Iq_mA  );
-}
+	}
+	else
+	{
+			MotorParm.Lq = 0.0f;
+			HAL_Delay(100);
+			usb_print( "Lq test failed: dIq too small=%f mA\r\n",   delta_Iq_mA  );
+	}
 
 
-/*
- * Ld/Lq全部测完，最后才撤掉电压
- */
-FOC_SetOpenLoopVector(0.0f, 0.0f);
+	/*
+	 * Ld/Lq全部测完，最后才撤掉电压
+	 */
+	FOC_SetOpenLoopVector(0.0f, 0.0f);
 
-HAL_Delay(100);
+	HAL_Delay(100);
 
 
 }
