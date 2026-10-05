@@ -108,6 +108,8 @@ typedef struct MotorParameters
 //#define MOTOR_ENCODER_DIR  (-1.0f)
 //#define MotorParm.ELECTRICAL_OFFSET  5.78f//6.3f// 5.936242f
 extern MotorParameters_t MotorParm;
+/* AI标志：非零表示编码器校准接口正在控制开环输出。 */
+extern volatile uint8_t Encoder_AI_Calibrating;
 extern float Vd;
 extern float Vq;
 extern float error;
