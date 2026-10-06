@@ -46,3 +46,4 @@ g431_foc\mt6816.o: ..\myCode\foc.h
 g431_foc\mt6816.o: ../bspCode/myADC.h
 g431_foc\mt6816.o: ../Core/Inc/tim.h
 g431_foc\mt6816.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\string.h
+g431_foc\mt6816.o: ../bspCode/bspUSB.h
