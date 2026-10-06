@@ -42,3 +42,7 @@ g431_foc\mt6816.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h
 g431_foc\mt6816.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h
 g431_foc\mt6816.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h
 g431_foc\mt6816.o: ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h
+g431_foc\mt6816.o: ..\myCode\foc.h
+g431_foc\mt6816.o: ../bspCode/myADC.h
+g431_foc\mt6816.o: ../Core/Inc/tim.h
+g431_foc\mt6816.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\string.h

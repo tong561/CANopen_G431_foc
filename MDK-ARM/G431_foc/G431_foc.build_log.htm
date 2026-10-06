@@ -22,23 +22,33 @@ Dialog DLL:      TCM.DLL V1.56.6.0
  
 <h2>Project:</h2>
 D:\WeCanCode\Wu\G431_foc - ¸±±¾\MDK-ARM\G431_foc.uvprojx
-Project File Date:  09/10/2026
+Project File Date:  10/06/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\keilv5\ARM\ARMCOMPILER_506\Bin'
 Build target 'G431_foc'
 compiling foc.c...
-..\myCode\foc.h(171): warning:  #1295-D: Deprecated declaration InductorAndRS_Check - give arg types
+..\myCode\foc.h(173): warning:  #1295-D: Deprecated declaration InductorAndRS_Check - give arg types
   void InductorAndRS_Check();
 ..\myCode\foc.c(311): warning:  #68-D: integer conversion resulted in a change of sign
   		Symbol=-1;
 ..\myCode\foc.c(321): warning:  #514-D: pointless comparison of unsigned integer with a negative constant
   		if(Symbol==-1)
 ..\myCode\foc.c: 3 warnings, 0 errors
+compiling MT6816.c...
+..\myCode\foc.h(173): warning:  #1295-D: Deprecated declaration InductorAndRS_Check - give arg types
+  void InductorAndRS_Check();
+..\myCode\MT6816.c: 1 warning, 0 errors
+compiling my_mian.c...
+..\myCode\foc.h(173): warning:  #1295-D: Deprecated declaration InductorAndRS_Check - give arg types
+  void InductorAndRS_Check();
+..\myCode\my_mian.c(188): warning:  #177-D: variable "sleep"  was declared but never referenced
+  	static uint16_t add_i=0,sleep=300;
+..\myCode\my_mian.c: 2 warnings, 0 errors
 linking...
-Program Size: Code=37748 RO-data=616 RW-data=800 ZI-data=28840  
+Program Size: Code=39998 RO-data=618 RW-data=844 ZI-data=29092  
 FromELF: creating hex file...
-"G431_foc\G431_foc.axf" - 0 Error(s), 3 Warning(s).
+"G431_foc\G431_foc.axf" - 0 Error(s), 6 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -62,7 +72,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@6.1.1
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:06
+Build Time Elapsed:  00:00:26
 </pre>
 </body>
 </html>
