@@ -99,11 +99,8 @@ void my_main(void)
 		 * 你 ADC_Init() 需要约 2000 次采样。
 		 */
 		HAL_Delay(500);
-
-
-
+	
 		OverCurrentFlag = 0;
-
 		/*
 		 * 清 PI积分量
 		 */
@@ -113,8 +110,15 @@ void my_main(void)
 		FOC_SVPWM(0.0f, 0.0f);//PWM先输出零电压：
 		FOC_PWM_Start();//开PWM
 		DRV8313_ENABLE();//最后开驱动
-
-		FOC_RunFlag = 1;//允许闭环
+		/* AI接口调用：加载编码器LUT；无有效Flash数据时自动开环采集并保存。 */
+		uint8_t encoder_cal_status=1;
+		// force_refresh=1 强制重新采集；=0 读取已有表。
+		encoder_cal_status=Encoder_AI_InitCalibration(1U);
+		if(encoder_cal_status!=1U)
+			usb_print("Encoder LUT calibration failed: %u\r\n",encoder_cal_status);
+		//NumberOfPolePairs_Check(20);
+		//HAL_Delay(1000);
+		FOC_RunFlag = 0;//允许闭环
 		uint16_t angle = MT6816_ReadOneAngle();
 		usb_print("angle=%u\r\n", angle);
 
@@ -129,7 +133,7 @@ while(1)
 	
 	 //NumberOfPolePairs_Check(20);
 	// InductorAndRS_Check();
-//	FOC_SetOpenLoopVector(a, 0.2f);
+//	if(!Encoder_AI_Calibrating) FOC_SetOpenLoopVector(a, 0.2f);
 	//usb_print("MotorParm.FOC_encoder_raw=%d,%f \r\n",MotorParm.FOC_encoder_raw,theta_e);
 //	a-=FOC_2PI/51600.0f;
 
@@ -184,21 +188,40 @@ while(1)
 /*******************************中断回调部分************************************************/
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	static uint16_t add_i=0;
+	static uint16_t add_i=0,sleep=300;
+	static float a=0;
     if(htim== &htim6)//1ms定时中断，canopen协议层用
     {
 			FOC_SpeedCalculate(POS_PI.pos);
 			add_i++;
-			if(add_i>3000)
-			{
-				FOC_SpeedLoop(-100);
-				if(add_i>6000)
-					add_i=0;
-			}
-			else
-			{
-				FOC_SpeedLoop(100);
-			}
+//			if(add_i>2000)
+//			{
+//				add_i=0;
+//				sleep+=500;
+//				if(sleep>5000)
+//				{
+//					sleep=300;
+//				}
+//			}
+//				FOC_SpeedLoop(sleep);
+			
+				if(!Encoder_AI_Calibrating) FOC_SetOpenLoopVector(a, 0.2f);
+			//usb_print("MotorParm.FOC_encoder_raw=%d,%f \r\n",MotorParm.FOC_encoder_raw,theta_e);
+				a-=FOC_2PI/512.0f;
+
+				if(a>FOC_2PI)
+					a+=FOC_2PI;
+				
+//			if(add_i>3000)
+//			{
+//				FOC_SpeedLoop(-3000);
+//				if(add_i>6000)
+//					add_i=0;
+//			}
+//			else
+//			{
+//				FOC_SpeedLoop(3000);
+//			}
       // canopen_app_interrupt();
 			
 			
@@ -222,7 +245,7 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc) {
 				adc2_value = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
 				/* 读取编码器，计算电角度 */
 				FOC_UpdateElectricalAngle();
-				FOC_POSCalculate(MotorParm.FOC_encoder_raw);
+				FOC_POSCalculate(MotorParm.FOC_encoder_raw);//里程累计
 				RUN_CYC=DWT->CYCCNT-start_CPU_CYC;
 				//FOC_SpeedLoop(400);
 					
@@ -365,7 +388,7 @@ if(MotorParm.open_Lq_check_flag)
     }
 }
 
-						if(FOC_RunFlag && !OverCurrentFlag)
+						if(Encoder_AI_GetCalibrationStatus()!=3U && FOC_RunFlag && !OverCurrentFlag)
 						{
 								
 								FOC_CurrentLoop();
@@ -375,16 +398,21 @@ if(MotorParm.open_Lq_check_flag)
 						{
 							FOC_Pram[add_i].ch0.f	=(float)MotorParm.FOC_encoder_raw;
 							FOC_Pram[add_i].ch1.f	=(float)Iq_ref;
-							FOC_Pram[add_i].ch2.f	=(float)error_V;
+							FOC_Pram[add_i].ch2.f	=(float)MotorParm.LUT_FOC_encoder_raw;
 							FOC_Pram[add_i].ch3.f	=(float)motor_speed_rpm_filt;
 							FOC_Pram[add_i].ch4.f	=I_d;
-							FOC_Pram[add_i].ch5.f	=I_q;
-							FOC_Pram[add_i].ch6.f	=Vd;
-							FOC_Pram[add_i].ch7.f	=Vq;
-							FOC_Pram[add_i].ch8.f	=(float)POS_PI.pos;
+							//FOC_Pram[add_i].ch5.f	=I_q;
+							FOC_Pram[add_i].ch6.f	=ADC_parm.I_a;
+							FOC_Pram[add_i].ch7.f	=ADC_parm.I_b;
+							FOC_Pram[add_i].ch8.f	=ADC_parm.I_c;
 							FOC_Pram[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;
 							FOC_Pram[add_i].arr[2]=0x80;
 							FOC_Pram[add_i].arr[3]=0x7f;
+							
+							if(add_i<127)
+								FOC_Pram[add_i].ch5.f	=MT6816_ErrorLUT[add_i];
+							else
+								FOC_Pram[add_i].ch5.f	=0;
 							add_i++;
 						}
 						else if(save_flag)
@@ -392,16 +420,20 @@ if(MotorParm.open_Lq_check_flag)
 							
 							FOC_Pram1[add_i].ch0.f	=(float)MotorParm.FOC_encoder_raw;
 							FOC_Pram1[add_i].ch1.f	=(float)Iq_ref;
-							FOC_Pram1[add_i].ch2.f	=(float)error_V;
+							FOC_Pram1[add_i].ch2.f	=(float)MotorParm.LUT_FOC_encoder_raw;
 							FOC_Pram1[add_i].ch3.f	=(float)motor_speed_rpm_filt;
 							FOC_Pram1[add_i].ch4.f	=I_d;
-							FOC_Pram1[add_i].ch5.f	=I_q;
-							FOC_Pram1[add_i].ch6.f	=Vd;
-							FOC_Pram1[add_i].ch7.f	=Vq;
-							FOC_Pram1[add_i].ch8.f	=(float)POS_PI.pos;
-							FOC_Pram1[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;
+							//FOC_Pram1[add_i].ch5.f	=I_q;
+							FOC_Pram1[add_i].ch6.f	=ADC_parm.I_a;
+							FOC_Pram1[add_i].ch7.f	=ADC_parm.I_b;
+							FOC_Pram1[add_i].ch8.f	=ADC_parm.I_c;
+							FOC_Pram1[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;//CPU占用率
 							FOC_Pram1[add_i].arr[2]=0x80;
 							FOC_Pram1[add_i].arr[3]=0x7f;
+							if(add_i<127)
+								FOC_Pram1[add_i].ch5.f	=MT6816_ErrorLUT[add_i];
+							else
+								FOC_Pram1[add_i].ch5.f	=0;
 							add_i++;
 						}
 						

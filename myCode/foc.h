@@ -93,7 +93,8 @@ typedef struct MotorParameters
 	float I_d;			//d轴电流
 	float I_q;			//q轴电流
 	float theta_e;	//θe电角度
-	uint16_t FOC_encoder_raw;//电机编码器值
+	volatile uint16_t FOC_encoder_raw;//原始编码器值
+	volatile uint16_t LUT_FOC_encoder_raw;//补偿后的编码器值
 	char open_L_check_flag;
 	char open_Lq_check_flag;
 	float	L_check_I_q;

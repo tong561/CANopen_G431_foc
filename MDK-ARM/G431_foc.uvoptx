@@ -157,34 +157,18 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>192</LineNumber>
+          <LineNumber>291</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134237636</Address>
+          <Address>134221282</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\WeCanCode\Wu\G431_foc - 鍓湰\myCode\my_mian.c</Filename>
+          <Filename>D:\WeCanCode\Wu\G431_foc - 鍓湰\myCode\MT6816.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\G431_foc\../myCode/my_mian.c\192</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>188</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134237622</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\WeCanCode\Wu\G431_foc - 鍓湰\myCode\my_mian.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\G431_foc\../myCode/my_mian.c\188</Expression>
+          <Expression>\\\../myCode/MT6816.c\291</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -394,7 +378,7 @@
       <GroupNumber>2</GroupNumber>
       <FileNumber>8</FileNumber>
       <FileType>1</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>../Core/Src/tim.c</PathWithFileName>
@@ -1242,7 +1226,7 @@
       <GroupNumber>12</GroupNumber>
       <FileNumber>72</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>..\myCode\MT6816.c</PathWithFileName>

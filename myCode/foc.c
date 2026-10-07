@@ -68,7 +68,7 @@ MotorParameters_t MotorParm=
 {
 	.MOTOR_POLE_PAIRS=7,//七对极
 	.VBUS=12,						//母线12V
-	.ELECTRICAL_OFFSET=-5.768919f,//电角度0点偏差
+	.ELECTRICAL_OFFSET=-0.180625f,//电角度0点偏差
 	.MOTOR_ENCODER_DIR=-1,//旋转方向
 	.open_L_check_flag=0,
 	.open_Lq_check_flag=0,
@@ -328,6 +328,16 @@ signed char NumberOfPolePairs_Check(unsigned char laps_numble)
 	//稳定，读取电角度零值对应机械位置
 	//存储电机0点偏移量
 	MotorParm.ELECTRICAL_OFFSET=-((float)MotorParm.FOC_encoder_raw/MT6816_CPR*FOC_2PI*MotorParm.MOTOR_ENCODER_DIR*MotorParm.MOTOR_POLE_PAIRS);
+	while(MotorParm.ELECTRICAL_OFFSET>=FOC_2PI)
+	{
+		MotorParm.ELECTRICAL_OFFSET-=FOC_2PI;
+	}
+	
+	while(MotorParm.ELECTRICAL_OFFSET<=-FOC_2PI)
+	{
+		MotorParm.ELECTRICAL_OFFSET+=FOC_2PI;
+		
+	}
 	usb_print("ELECTRICAL_OFFSET:%f\r\n",MotorParm.ELECTRICAL_OFFSET);
 	return MotorParm.MOTOR_POLE_PAIRS;
 }
@@ -669,27 +679,25 @@ float FOC_WrapAngle(float angle)
 }
 
 
-#define MT6816_LUT_ENABLE  0	//1LUT补偿
+#define MT6816_LUT_ENABLE  1	//1=LUT补偿	//1LUT补偿
 
 void FOC_UpdateElectricalAngle(void)
 {
-    float encoder_used;
+    uint16_t encoder_used;
 
     MotorParm.FOC_encoder_raw = MT6816_ReadOneAngle();
 
 #if MT6816_LUT_ENABLE
-
-    encoder_used =
-        Encoder_GetCorrectedRaw(MotorParm.FOC_encoder_raw);
-
+		
+    encoder_used =Encoder_GetCorrectedRaw(MotorParm.FOC_encoder_raw);
+		MotorParm.LUT_FOC_encoder_raw=encoder_used;
 #else
 
-    encoder_used =
-        (float)MotorParm.FOC_encoder_raw;
+    encoder_used =MotorParm.FOC_encoder_raw;
 
 #endif
 
-    theta_m =encoder_used *FOC_2PI /(float)MT6816_CPR;
+    theta_m =encoder_used *FOC_2PI /(float)MT6816_CPR;//机械角
 
     theta_e = MotorParm.MOTOR_ENCODER_DIR * MotorParm.MOTOR_POLE_PAIRS *theta_m + MotorParm.ELECTRICAL_OFFSET;
 
@@ -861,10 +869,7 @@ void FOC_SpeedCalculate(uint64_t encoder_raw)
     motor_speed_rpm = (float)delta *60.0f /((float)ENCODER_CPR * SPEED_DT);
 
     /* 简单低通 */
-    motor_speed_rpm_filt +=
-        0.1f *
-        (motor_speed_rpm -
-         motor_speed_rpm_filt);
+    motor_speed_rpm_filt +=0.1f * (motor_speed_rpm - motor_speed_rpm_filt);
 }
 
 typedef struct
@@ -944,8 +949,8 @@ float Speed_Friction_FeedForward(float speed_rpm)
     return iq_ff;
 }
 SpeedPI_t Speed_PI = {
-    .kp = 1.0f,//1.8f,
-    .ki = 0.1f,
+    .kp = 0.5f,//1.8f,
+    .ki = 0.03f,
 		.kd =0.0f,// 6.1f,
     .integral = 0.0f,
     .out_limit = 1500.0f

@@ -5,6 +5,7 @@
 #include "stm32g4xx_hal_flash_ex.h"
 #include <stddef.h>
 #include <string.h>
+#include "bspUSB.h"
 unsigned short  MT6816_ReadOneAngle(void)
 {
 		SPI1->CR1 |= SPI_CR1_SPE;
@@ -92,21 +93,8 @@ int Encoder_GetDelta(uint16_t now, uint16_t last)
     }
     return delta;
 }
-#define MT6816_LUT_SIZE 128                 /* AI误差表点数，覆盖编码器整圈。 */
-#define MT6816_CAL_MAGIC 0x41494C55UL       /* AI参数有效标志，用于识别Flash中的校准数据。 */
-#define MT6816_CAL_VERSION 1U               /* AI参数格式版本，结构变化时递增。 */
-#define MT6816_CAL_PAGE 62U                 /* AI保存区起始页号，STM32G431每页2KB。 */
-#define MT6816_CAL_PAGE_SIZE 0x800U         /* AI Flash页大小，单位字节。 */
-#define MT6816_CAL_BASE (FLASH_BASE + MT6816_CAL_PAGE * MT6816_CAL_PAGE_SIZE) /* AI主存储槽首地址。 */
-#define MT6816_CAL_REV_BASE (MT6816_CAL_BASE + MT6816_CAL_PAGE_SIZE) /* AI备份存储槽首地址。 */
-#define MT6816_CAL_TURNS 8U                 /* AI开环采集圈数，用于多圈平均。 */
-#define MT6816_CAL_STEPS 512U               /* AI每圈开环角度更新步数。 */
-#define MT6816_CAL_AMP 0.10f                /* AI开环电压矢量幅值，归一化范围0~1。 */
-#define MT6816_CAL_AUTO 1U                  /* AI自动校准开关，1=无有效数据时自动采集。 */
-#define MT6816_CAL_OK 1U                    /* AI状态码：校准表已加载或保存成功。 */
-#define MT6816_CAL_NO_DATA 0U               /* AI状态码：Flash无有效校准数据。 */
-#define MT6816_CAL_ERR 2U                   /* AI状态码：采集、校验或Flash操作失败。 */
-static float MT6816_ErrorLUT[MT6816_LUT_SIZE]; /* AI运行时误差表，单位为编码器raw计数。 */
+
+int16_t MT6816_ErrorLUT[MT6816_LUT_SIZE]; /* AI运行时误差表，单位为编码器raw计数。 */
 static uint8_t MT6816_CalStatus=MT6816_CAL_NO_DATA; /* AI当前校准状态：0未就绪、1有效、2失败。 */
 static uint8_t MT6816_LUT_Ready=0U;          /* AI标志：非零表示RAM误差表已初始化。 */
 volatile uint8_t Encoder_AI_Calibrating=0U;   /* AI标志：非零表示校准接口正在独占开环控制。 */
@@ -116,10 +104,16 @@ typedef struct
     uint32_t magic;                 /* AI数据有效标志。 */
     uint16_t version,size;          /* AI格式版本和LUT点数。 */
     uint32_t sequence;              /* AI数据序号，用于选择最新有效槽。 */
-    int16_t lut[MT6816_LUT_SIZE];  /* AI定点编码器误差，扩大16倍保存。 */
+    int16_t lut[MT6816_LUT_SIZE];   /* AI整数编码器误差，单位为raw计数。 */
     uint32_t crc;                   /* AI数据CRC32校验值。 */
 } Encoder_AI_FlashData_t;
-/* AI内部函数：计算数据CRC，输入为数据指针和字节数，返回CRC32校验值。 */
+/**
+  * @brief AI内部函数：计算校准数据的CRC32校验值。
+  * @param data:待计算数据的首地址。
+  * @param length:待计算数据的字节数。
+  * @retval 返回CRC32校验值。
+  * 功能：用于判断Flash中的校准数据是否完整、有效。
+  */
 static uint32_t Encoder_AI_CRC32(const uint8_t *data,uint32_t length)
 {
     uint32_t crc=0xFFFFFFFFUL;
@@ -133,27 +127,48 @@ static uint32_t Encoder_AI_CRC32(const uint8_t *data,uint32_t length)
     }
     return crc^0xFFFFFFFFUL;
 }
-/* AI内部函数：读取并校验一个Flash槽，输入地址和数据结构指针，返回1有效、0无效。 */
+/**
+  * @brief AI内部函数：读取并校验一个Flash存储槽。
+  * @param address:Flash存储槽首地址。
+  * @param data:用于接收Flash数据的数据结构指针。
+  * @retval 返回1表示数据有效，返回0表示数据无效。
+  * 功能：检查有效标志、版本、LUT长度和CRC，防止上电加载损坏数据。
+  */
 static uint8_t Encoder_AI_ReadSlot(uint32_t address,Encoder_AI_FlashData_t *data)
 {
     memcpy(data,(const void *)address,sizeof(*data));
-    if(data->magic!=MT6816_CAL_MAGIC||data->version!=MT6816_CAL_VERSION||data->size!=MT6816_LUT_SIZE)return 0U;
+    if(data->magic!=MT6816_CAL_MAGIC||
+			 data->version!=MT6816_CAL_VERSION||
+			 data->size!=MT6816_LUT_SIZE)
+			return 0U;
     return data->crc==Encoder_AI_CRC32((const uint8_t *)data,offsetof(Encoder_AI_FlashData_t,crc));
 }
-/* AI内部函数：把已校验的Flash数据复制到RAM LUT，输入为有效Flash数据指针，无返回值。 */
+/**
+  * @brief AI内部函数：加载已校验的Flash校准数据。
+  * @param data:已通过校验的Flash数据结构指针。
+  * @retval 无。
+  * 功能：把Flash中的整数raw误差加载到RAM LUT供实时补偿使用。
+  */
 static void Encoder_AI_UseFlashData(const Encoder_AI_FlashData_t *data)
 {
-    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)MT6816_ErrorLUT[i]=(float)data->lut[i]/16.0f;
+    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)
+			MT6816_ErrorLUT[i]=data->lut[i];
     MT6816_LUT_Ready=1U;
     MT6816_CalStatus=MT6816_CAL_OK;
 }
-/* AI内部函数：把128点误差表写入交替Flash页，输入误差表指针，返回保存成功标志。 */
-static uint8_t Encoder_AI_Save(const float *lut)
+/**
+  * @brief AI内部函数：保存编码器误差LUT到Flash。
+  * @param lut:待保存的128点整数误差表，单位为编码器raw计数。
+  * @retval 返回1表示保存并回读校验成功，返回0表示Flash操作失败。
+  * 功能：在两个Flash槽之间交替写入，保存整数raw误差表。
+  */
+#if MT6816_CAL_WRITE_FLASH
+static uint8_t Encoder_AI_Save(const int16_t *lut)
 {
     Encoder_AI_FlashData_t data,old;
     uint8_t va=Encoder_AI_ReadSlot(MT6816_CAL_BASE,&old); /* AI主槽有效标志。 */
     uint32_t address=MT6816_CAL_REV_BASE,seq=1U; /* AI本次目标槽地址和递增序号。 */
-    if(va)
+    if(va)//校验有效
     {
         seq=old.sequence+1U;
         address=MT6816_CAL_REV_BASE;
@@ -170,10 +185,7 @@ static uint8_t Encoder_AI_Save(const float *lut)
     data.sequence=seq;
     for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)
     {
-        float value=lut[i]*16.0f;
-        if(value>32767.0f)value=32767.0f;
-        if(value<-32768.0f)value=-32768.0f;
-        data.lut[i]=(int16_t)value;
+        data.lut[i]=lut[i];
     }
     data.crc=Encoder_AI_CRC32((const uint8_t *)&data,offsetof(Encoder_AI_FlashData_t,crc));
     FLASH_EraseInitTypeDef erase={0};
@@ -200,148 +212,204 @@ static uint8_t Encoder_AI_Save(const float *lut)
     HAL_FLASH_Lock();
     return Encoder_AI_ReadSlot(address,&old);
 }
-/* AI接口：无输入，返回0未就绪、1校准数据有效、2校准或Flash操作失败。 */
-/* 功能：查询当前编码器LUT的加载或校准状态。 */
+#endif
+/**
+  * @brief AI接口：查询编码器LUT校准状态。
+  * @param 无。
+  * @retval 返回0表示未就绪，返回1表示LUT有效，返回2表示校准或Flash操作失败。
+  * 功能：供外部判断编码器补偿表当前是否可以使用。
+  */
 uint8_t Encoder_AI_GetCalibrationStatus(void)
 {
     return MT6816_CalStatus;
 }
-/* AI接口：无输入，返回0无有效数据、1 LUT已就绪、2校准或保存失败。 */
-/* 功能：优先从Flash加载LUT；无有效数据时独占开环、采集一圈误差并保存128点LUT。 */
-uint8_t Encoder_AI_InitCalibration(void)
+/**
+  * @brief AI接口：初始化编码器误差LUT。
+  * @param 无。
+  * @retval 返回0表示无有效数据，返回1表示LUT加载或校准成功，返回2表示校准或保存失败。
+  * 功能：上电先读取Flash中的有效LUT；没有有效数据时，暂时独占开环控制，采集编码器误差，生成128点LUT并掉电保存。
+  */
+uint8_t Encoder_AI_InitCalibration(uint8_t force_refresh)
 {
     Encoder_AI_FlashData_t dataA,dataB;
     uint8_t validA=Encoder_AI_ReadSlot(MT6816_CAL_BASE,&dataA); /* AI主槽校验结果。 */
     uint8_t validB=Encoder_AI_ReadSlot(MT6816_CAL_REV_BASE,&dataB); /* AI备份槽校验结果。 */
-    if(validA||validB)
+    if((validA||validB)&&!force_refresh)
     {
         if(validA&&validB)Encoder_AI_UseFlashData(dataA.sequence>=dataB.sequence?&dataA:&dataB);
         else Encoder_AI_UseFlashData(validA?&dataA:&dataB);
         return MT6816_CAL_OK;
     }
-#if !MT6816_CAL_AUTO
-    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)MT6816_ErrorLUT[i]=0.0f;
+#if !MT6816_CAL_AUTO //如果未打开自动校准
+    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)MT6816_ErrorLUT[i]=0;
     MT6816_LUT_Ready=1U;
     MT6816_CalStatus=MT6816_CAL_NO_DATA;
     return MT6816_CAL_NO_DATA;
 #else
-    if(MotorParm.open_L_check_flag||MotorParm.open_Lq_check_flag)
+    if(MotorParm.MOTOR_POLE_PAIRS==0U||MotorParm.open_L_check_flag||MotorParm.open_Lq_check_flag)//极对数无效或有其它校验任务
     {
-        MT6816_CalStatus=MT6816_CAL_ERR;
+        MT6816_CalStatus=MT6816_CAL_ERR;//状态设置为错误
+				usb_print("ERROR=%d\r\n",MT6816_CalStatus);
         return MT6816_CAL_ERR;
     }
     uint8_t wasEnabled=(GPIOB->ODR&(1U<<11))?1U:0U; /* 保存校准前驱动使能状态。 */
     uint8_t wasRunning=(htim1.Instance->CCER&(TIM_CCER_CC1E|TIM_CCER_CC2E|TIM_CCER_CC3E))?1U:0U; /* 保存校准前PWM状态。 */
-    float sum[MT6816_LUT_SIZE]={0},count[MT6816_LUT_SIZE]={0}; /* 各角度分箱的误差和、采样数。 */
+    int64_t bin_sum_x[MT6816_LUT_SIZE]={0},bin_sum_y[MT6816_LUT_SIZE]={0};
+    uint16_t count[MT6816_LUT_SIZE]={0};
+    int64_t fit_sum_x=0,fit_sum_y=0,fit_sum_xx=0,fit_sum_xy=0;
+    uint32_t fit_count=0U;
     uint16_t last=MT6816_ReadOneAngle(); /* 上次有效编码器角度raw值。 */
-    int32_t unwrapped=0; /* 跨过编码器零点后的连续角度计数。 */
-    float commanded=0.0f,commandOrigin=0.0f; /* 当前开环角度及起始相位差，单位rad。 */
-    float fitSumX=0.0f,fitSumY=0.0f,fitSumXX=0.0f,fitSumXY=0.0f,fitCount=0.0f; /* 多圈开环角度与编码器角度线性拟合累计量。 */
+    int32_t unwrapped=0; /* 相对采样起点的机械位移。 */
+    float commanded=0.0f;
+    uint32_t pole_pairs=(uint32_t)MotorParm.MOTOR_POLE_PAIRS; /* 极对数仅用于电角/机械角换算。 */
+    uint32_t calTurns=MT6816_CAL_TURNS; /* 采集机械圈数由宏独立控制。 */
     Encoder_AI_Calibrating=1U;
     FOC_SVPWM(0.0f,0.0f);
     FOC_PWM_Start();
     DRV8313_ENABLE();
     HAL_Delay(20);
-    for(uint32_t step=0;step<MT6816_CAL_STEPS*MT6816_CAL_TURNS;step++)
+    for(uint32_t step=0;step<MT6816_CAL_STEPS*pole_pairs*calTurns;step++)
     {
         commanded=(float)(step%MT6816_CAL_STEPS)*FOC_2PI/MT6816_CAL_STEPS;
-        FOC_SetOpenLoopVector(commanded,MT6816_CAL_AMP);
-        HAL_Delay(2);
-        uint16_t raw=MT6816_ReadOneAngle(); /* 本次MT6816原始角度。 */
-        if(raw>=MT6816_CPR)continue;
+        FOC_SetOpenLoopVector(commanded,MT6816_CAL_AMP);//开环吸合转子到位
+        HAL_Delay(MT6816_CAL_SETTLE_MS);
+        uint16_t raw=MotorParm.FOC_encoder_raw; /* 本次MT6816原始角度。直接取中断读取角度值 */
+        if(raw>=MT6816_CPR)//编码器数值无效
+					continue;
         int32_t delta=(int32_t)raw-(int32_t)last; /* 相邻样本的带符号角度增量。 */
-        if(delta>(MT6816_CPR/2))delta-=MT6816_CPR;
-        else if(delta<-(MT6816_CPR/2))delta+=MT6816_CPR;
+        if(delta>(MT6816_CPR/2))//跨零处理
+					delta-=MT6816_CPR;
+        else if(delta<-(MT6816_CPR/2))
+					delta+=MT6816_CPR;
         last=raw;
         unwrapped+=delta;
-        uint16_t index=(uint16_t)(((uint32_t)raw*MT6816_LUT_SIZE)/MT6816_CPR); /* 原始角度对应的LUT分箱。 */
-        if(index>=MT6816_LUT_SIZE)index=0U;
-        float x=(float)step*FOC_2PI/MT6816_CAL_STEPS; /* 累计开环电角度指令，单位rad。 */
-        float y=(float)unwrapped*FOC_2PI/MT6816_CPR; /* 连续编码器机械角度，单位rad。 */
-        if(step==0U)commandOrigin=y-x;
-        fitSumX+=x;
-        fitSumY+=y;
-        fitSumXX+=x*x;
-        fitSumXY+=x*y;
-        fitCount+=1.0f;
-        sum[index]+=y-x-commandOrigin;
-        count[index]+=1.0f;
+        int32_t command_turn=(int32_t)(step/((uint32_t)MT6816_CAL_STEPS*pole_pairs));
+        int32_t command_phase=(int32_t)(step%((uint32_t)MT6816_CAL_STEPS*pole_pairs));
+        int32_t x=command_turn*(int32_t)MT6816_CAL_STEPS+command_phase;
+        int32_t y=unwrapped;
+        int64_t x_centered=x;
+        int64_t y_centered=(int64_t)y;
+        fit_sum_x+=x_centered;
+        fit_sum_y+=y_centered;
+        fit_sum_xx+=x_centered*x_centered;
+        fit_sum_xy+=x_centered*y_centered;
+        fit_count++;
+        /* LUT横轴使用运行时相同的原始编码器raw相位。 */
+        uint16_t index=(uint16_t)(((uint32_t)raw*MT6816_LUT_SIZE)/MT6816_CPR);
+        bin_sum_x[index]+=x_centered;
+        bin_sum_y[index]+=y_centered;
+        count[index]++;
     }
+		//采样完成恢复现场
     FOC_SetOpenLoopVector(commanded,0.0f);
     HAL_Delay(20);
     if(!wasEnabled)DRV8313_DISABLE();
     if(!wasRunning)FOC_PWM_Stop();
     Encoder_AI_Calibrating=0U;
-    float total=0.0f; /* 有效采样总数，用于检查采集覆盖率。 */
-    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)total+=count[i];
-    if(total<MT6816_LUT_SIZE*MT6816_CAL_TURNS*0.5f||fitCount<2.0f)
+    uint32_t total=0U;
+    uint16_t validBins=0U;
+    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)
+    {
+        total+=count[i];
+        if(count[i]>0U)validBins++;
+    }
+    if(total<(uint32_t)MT6816_LUT_SIZE*calTurns/2U || validBins<(MT6816_LUT_SIZE*3U)/4U)
     {
         MT6816_CalStatus=MT6816_CAL_ERR;
         return MT6816_CAL_ERR;
     }
-    float slope=(fitCount*fitSumXY-fitSumX*fitSumY)/(fitCount*fitSumXX-fitSumX*fitSumX); /* 开环指令到编码器角度的比例拟合值。 */
-    float intercept=(fitSumY-slope*fitSumX)/fitCount; /* 开环与编码器的固定相位差，单位rad。 */
-    if(slope<0.8f||slope>1.2f)
+    /* 整数最小二乘拟合强托轨迹直线，允许起点偏置和实测斜率偏差。 */
+    int64_t denominator=(int64_t)fit_count*fit_sum_xx-fit_sum_x*fit_sum_x;
+    int64_t slope_num=(int64_t)fit_count*fit_sum_xy-fit_sum_x*fit_sum_y;
+    if(fit_count<2U || denominator<=0 || slope_num<=0)
+    {
+        MT6816_CalStatus=MT6816_CAL_ERR;
+        return MT6816_CAL_ERR;
+    }
+    /* 以千分之一为定点比例，斜率理论值为 CPR/(steps*pole_pairs)。 */
+    int64_t slope_q=(slope_num*1000+denominator/2)/denominator;
+    if(slope_q<((1000LL*MT6816_CPR)/(MT6816_CAL_STEPS*pole_pairs))*7/10 || slope_q>((1000LL*MT6816_CPR)/(MT6816_CAL_STEPS*pole_pairs))*13/10)
     {
         MT6816_CalStatus=MT6816_CAL_ERR;
         return MT6816_CAL_ERR;
     }
     for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)
     {
-        MT6816_ErrorLUT[i]=count[i]>0.0f?sum[i]/count[i]-(intercept+(slope-1.0f)*(float)i*FOC_2PI/MT6816_LUT_SIZE):0.0f;
+        if(count[i]>0U)
+        {
+            int64_t x_mean_q=(bin_sum_x[i]*1000+(bin_sum_x[i]>=0?count[i]/2U:-(int64_t)count[i]/2U))/count[i];
+            int64_t y_mean_q=(bin_sum_y[i]*1000+(bin_sum_y[i]>=0?count[i]/2U:-(int64_t)count[i]/2U))/count[i];
+            int64_t residual_q=y_mean_q-(slope_q*x_mean_q)/1000;
+            MT6816_ErrorLUT[i]=(int16_t)((residual_q>=0)?(residual_q+500)/1000:(residual_q-500)/1000);
+        }
+        else MT6816_ErrorLUT[i]=0;
     }
     for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)
     {
-        if(count[i]==0.0f)
+        if(count[i]==0U)
         {
             uint16_t left=i,right=i,tries=0U; /* 缺样分箱左右最近的有效点。 */
-            do{left=(left+MT6816_LUT_SIZE-1U)%MT6816_LUT_SIZE;tries++;}while(count[left]==0.0f&&tries<MT6816_LUT_SIZE);
+            do{left=(left+MT6816_LUT_SIZE-1U)%MT6816_LUT_SIZE;tries++;}while(count[left]==0U&&tries<MT6816_LUT_SIZE);
             tries=0U;
-            do{right=(right+1U)%MT6816_LUT_SIZE;tries++;}while(count[right]==0.0f&&tries<MT6816_LUT_SIZE);
-            if(count[left]==0.0f||count[right]==0.0f)
+            do{right=(right+1U)%MT6816_LUT_SIZE;tries++;}while(count[right]==0U&&tries<MT6816_LUT_SIZE);
+            if(count[left]==0U||count[right]==0U)
             {
                 MT6816_CalStatus=MT6816_CAL_ERR;
                 return MT6816_CAL_ERR;
             }
-            float span=(float)((right+MT6816_LUT_SIZE-left)%MT6816_LUT_SIZE); /* 插值跨越的LUT点数。 */
-            float position=(float)((i+MT6816_LUT_SIZE-left)%MT6816_LUT_SIZE); /* 当前缺样点到左侧有效点的距离。 */
-            MT6816_ErrorLUT[i]=MT6816_ErrorLUT[left]+(MT6816_ErrorLUT[right]-MT6816_ErrorLUT[left])*position/span;
+            uint16_t span=(uint16_t)((right+MT6816_LUT_SIZE-left)%MT6816_LUT_SIZE);
+            if(span==0U)
+            {
+                MT6816_CalStatus=MT6816_CAL_ERR;
+                return MT6816_CAL_ERR;
+            }
+            uint16_t position=(uint16_t)((i+MT6816_LUT_SIZE-left)%MT6816_LUT_SIZE);
+            int32_t numerator=(int32_t)MT6816_ErrorLUT[left]*(span-position)+(int32_t)MT6816_ErrorLUT[right]*position;
+            MT6816_ErrorLUT[i]=(int16_t)((numerator>=0)?(numerator+span/2U)/span:(numerator-span/2U)/span);
         }
     }
-    float offset=0.0f; /* LUT误差均值，用于去除固定角度偏置。 */
-    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)offset+=MT6816_ErrorLUT[i];
-    offset/=MT6816_LUT_SIZE;
+    int32_t offset_sum=0;
+    for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)offset_sum+=MT6816_ErrorLUT[i];
+    int16_t offset=(int16_t)((offset_sum>=0)?(offset_sum+MT6816_LUT_SIZE/2U)/MT6816_LUT_SIZE:(offset_sum-MT6816_LUT_SIZE/2U)/MT6816_LUT_SIZE);
     for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)MT6816_ErrorLUT[i]-=offset;
+#if MT6816_CAL_WRITE_FLASH
     if(!Encoder_AI_Save(MT6816_ErrorLUT))
     {
         MT6816_CalStatus=MT6816_CAL_ERR;
         return MT6816_CAL_ERR;
     }
+#endif
     MT6816_LUT_Ready=1U;
     MT6816_CalStatus=MT6816_CAL_OK;
     return MT6816_CAL_OK;
 #endif
 }
-/* AI接口：输入MT6816原始角度0~16383，输出线性插值后的补偿角度。 */
+/* AI接口：输入MT6816原始角度0~16383，输出整数补偿角度。 */
 /* 功能：按128点误差LUT修正编码器周期误差；LUT尚未加载时先使用零误差表。 */
-float Encoder_GetCorrectedRaw(uint16_t raw)
+uint16_t Encoder_GetCorrectedRaw(uint16_t raw)
 {
-    uint16_t index=(uint16_t)(raw>>7); /* 当前raw角度对应的LUT左侧节点。 */
-    uint16_t next=(uint16_t)((index+1U)%MT6816_LUT_SIZE); /* 插值右侧节点，末点后回到0。 */
-    uint16_t sub=(uint16_t)(raw&0x7FU); /* LUT节点间的raw计数偏移。 */
-    float frac=(float)sub/128.0f; /* 节点间插值比例，范围0~1。 */
+    uint16_t index=(uint16_t)(raw>>7);
+    uint16_t next=(uint16_t)((index+1U)%MT6816_LUT_SIZE);
+    uint16_t sub=(uint16_t)(raw&0x7FU);
     if(!MT6816_LUT_Ready)
     {
-        for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)MT6816_ErrorLUT[i]=0.0f;
+        for(uint16_t i=0;i<MT6816_LUT_SIZE;i++)MT6816_ErrorLUT[i]=0;
         MT6816_LUT_Ready=1U;
     }
-    float err=MT6816_ErrorLUT[index]+frac*(MT6816_ErrorLUT[next]-MT6816_ErrorLUT[index]); /* 插值得到的raw误差。 */
-    float corrected=(float)raw-err; /* 减去误差后的编码器角度raw值。 */
-    if(corrected>=MT6816_CPR)corrected-=MT6816_CPR;
-    if(corrected<0.0f)corrected+=MT6816_CPR;
-    return corrected;
+    int32_t numerator=(int32_t)MT6816_ErrorLUT[index]*(128U-sub)+(int32_t)MT6816_ErrorLUT[next]*sub;
+    int32_t err=(numerator>=0)?(numerator+64)/128:(numerator-64)/128;
+    int32_t corrected=(int32_t)raw-err;
+    if(corrected>=(int32_t)MT6816_CPR)corrected-=(int32_t)MT6816_CPR;
+    if(corrected<0)corrected+=(int32_t)MT6816_CPR;
+    return (uint16_t)corrected;
 }
 float Encoder_RawToRad(float raw)
 {
     return raw*6.28318530717958647692f/(float)MT6816_CPR;
 }
+
+
+
+
+
+
