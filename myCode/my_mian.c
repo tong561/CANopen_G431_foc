@@ -14,6 +14,7 @@
 #include "foc.h"
 #include "math.h"
 #include "CPU_load.h"
+#define FOC_POSITION_AUTO_TEST 0 /* Original automatic target test: disabled */
 #define CURRENT_LIMIT_MA   2000.0f
 PPDetect_t PoleDetect;
 volatile uint8_t OverCurrentFlag = 0;
@@ -113,12 +114,12 @@ void my_main(void)
 		/* AI接口调用：加载编码器LUT；无有效Flash数据时自动开环采集并保存。 */
 		uint8_t encoder_cal_status=1;
 		// force_refresh=1 强制重新采集；=0 读取已有表。
-		encoder_cal_status=Encoder_AI_InitCalibration(1U);
-		if(encoder_cal_status!=1U)
+		//encoder_cal_status=Encoder_AI_InitCalibration(1U);
+		//if(encoder_cal_status!=1U)
 			usb_print("Encoder LUT calibration failed: %u\r\n",encoder_cal_status);
 		//NumberOfPolePairs_Check(20);
 		//HAL_Delay(1000);
-		FOC_RunFlag = 0;//允许闭环
+		FOC_RunFlag = 1;//允许闭环
 		uint16_t angle = MT6816_ReadOneAngle();
 		usb_print("angle=%u\r\n", angle);
 
@@ -130,6 +131,7 @@ char usb_flag=0;
 
 while(1)
 {
+    USB_CommandProcess();
 	
 	 //NumberOfPolePairs_Check(20);
 	// InductorAndRS_Check();
@@ -205,28 +207,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 //			}
 //				FOC_SpeedLoop(sleep);
 			
-				if(!Encoder_AI_Calibrating) FOC_SetOpenLoopVector(a, 0.2f);
+//				if(!Encoder_AI_Calibrating) FOC_SetOpenLoopVector(a, 0.2f);
 			//usb_print("MotorParm.FOC_encoder_raw=%d,%f \r\n",MotorParm.FOC_encoder_raw,theta_e);
-				a-=FOC_2PI/512.0f;
+//				a-=FOC_2PI/512.0f;
 
-				if(a>FOC_2PI)
-					a+=FOC_2PI;
-				
-//			if(add_i>3000)
-//			{
-//				FOC_SpeedLoop(-3000);
-//				if(add_i>6000)
-//					add_i=0;
-//			}
-//			else
-//			{
-//				FOC_SpeedLoop(3000);
-//			}
+//				if(a>FOC_2PI)
+//					a+=FOC_2PI;
+//				
+			if(!Encoder_AI_Calibrating && FOC_RunFlag && !OverCurrentFlag)
+			{
+        if(USB_ControlMode)
+					FOC_PosLoop(USB_PositionTarget); 
+				else 
+					{
+                    FOC_VelocityCommand((float)USB_SpeedTargetRPM);
+          }
+			}
+            else FOC_PositionTrajectoryReset();
       // canopen_app_interrupt();
 			
-			
-			
-			//FOC_PosLoop(pos);
+			#if FOC_POSITION_AUTO_TEST
+            USB_PositionTarget+=16384;
+			if(add_i>3000)
+			{
+				if(add_i>6000)
+					add_i=0;
+				USB_PositionTarget=16384*4;
+			}
+			if(add_i<3000)
+			{
+				USB_PositionTarget=0;
+			}
+			#endif
+            //FOC_PosLoop(pos);
 			
 			
 			
@@ -401,18 +414,18 @@ if(MotorParm.open_Lq_check_flag)
 							FOC_Pram[add_i].ch2.f	=(float)MotorParm.LUT_FOC_encoder_raw;
 							FOC_Pram[add_i].ch3.f	=(float)motor_speed_rpm_filt;
 							FOC_Pram[add_i].ch4.f	=I_d;
-							//FOC_Pram[add_i].ch5.f	=I_q;
-							FOC_Pram[add_i].ch6.f	=ADC_parm.I_a;
-							FOC_Pram[add_i].ch7.f	=ADC_parm.I_b;
-							FOC_Pram[add_i].ch8.f	=ADC_parm.I_c;
+							FOC_Pram[add_i].ch5.f	=I_q;
+							FOC_Pram[add_i].ch6.f	=(float)POS_PI.pos;
+							FOC_Pram[add_i].ch7.f	=(float)USB_PositionTarget;
+							FOC_Pram[add_i].ch8.f	=(float)error_pos;
 							FOC_Pram[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;
 							FOC_Pram[add_i].arr[2]=0x80;
 							FOC_Pram[add_i].arr[3]=0x7f;
 							
-							if(add_i<127)
-								FOC_Pram[add_i].ch5.f	=MT6816_ErrorLUT[add_i];
-							else
-								FOC_Pram[add_i].ch5.f	=0;
+//							if(add_i<127)
+//								FOC_Pram[add_i].ch5.f	=MT6816_ErrorLUT[add_i];
+//							else
+//								FOC_Pram[add_i].ch5.f	=0;
 							add_i++;
 						}
 						else if(save_flag)
@@ -423,17 +436,17 @@ if(MotorParm.open_Lq_check_flag)
 							FOC_Pram1[add_i].ch2.f	=(float)MotorParm.LUT_FOC_encoder_raw;
 							FOC_Pram1[add_i].ch3.f	=(float)motor_speed_rpm_filt;
 							FOC_Pram1[add_i].ch4.f	=I_d;
-							//FOC_Pram1[add_i].ch5.f	=I_q;
-							FOC_Pram1[add_i].ch6.f	=ADC_parm.I_a;
-							FOC_Pram1[add_i].ch7.f	=ADC_parm.I_b;
-							FOC_Pram1[add_i].ch8.f	=ADC_parm.I_c;
+							FOC_Pram1[add_i].ch5.f	=I_q;
+							FOC_Pram1[add_i].ch6.f	=(float)POS_PI.pos;
+							FOC_Pram1[add_i].ch7.f	=(float)USB_PositionTarget;
+							FOC_Pram1[add_i].ch8.f	=(float)error_pos;
 							FOC_Pram1[add_i].ch9.f	=(float)RUN_CYC/TEST_CYCLES;//CPU占用率
 							FOC_Pram1[add_i].arr[2]=0x80;
 							FOC_Pram1[add_i].arr[3]=0x7f;
-							if(add_i<127)
-								FOC_Pram1[add_i].ch5.f	=MT6816_ErrorLUT[add_i];
-							else
-								FOC_Pram1[add_i].ch5.f	=0;
+//							if(add_i<127)
+//								FOC_Pram1[add_i].ch5.f	=MT6816_ErrorLUT[add_i];
+//							else
+//								FOC_Pram1[add_i].ch5.f	=0;
 							add_i++;
 						}
 						

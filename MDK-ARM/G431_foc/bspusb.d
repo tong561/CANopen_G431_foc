@@ -55,3 +55,8 @@ g431_foc\bspusb.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlr
 g431_foc\bspusb.o: ../Core/Inc/main.h
 g431_foc\bspusb.o: ../USB_Device/App/usb_device.h
 g431_foc\bspusb.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\stdarg.h
+g431_foc\bspusb.o: ../myCode/foc.h
+g431_foc\bspusb.o: ../bspCode/myADC.h
+g431_foc\bspusb.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\errno.h
+g431_foc\bspusb.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\math.h
+g431_foc\bspusb.o: D:\keilv5\ARM\ARMCOMPILER_506\Bin\..\include\limits.h

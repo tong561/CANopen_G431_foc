@@ -2671,7 +2671,7 @@ I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h)(0x6A82D3E8)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h)(0x6A82D3E8)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h)(0x6A82D3E8)
 I (../USB_Device/App/usbd_desc.h)(0x6A8F95D7)
-F (../USB_Device/App/usbd_cdc_if.c)(0x6A8F95D7)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\usbd_cdc_if.o --omf_browse g431_foc\usbd_cdc_if.crf --depend g431_foc\usbd_cdc_if.d)
+F (../USB_Device/App/usbd_cdc_if.c)(0x6ACF33BF)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\usbd_cdc_if.o --omf_browse g431_foc\usbd_cdc_if.crf --depend g431_foc\usbd_cdc_if.d)
 I (../USB_Device/App/usbd_cdc_if.h)(0x6A8F95D7)
 I (../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h)(0x6A82D3E8)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h)(0x6A82D3E8)
@@ -2722,6 +2722,7 @@ I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h)(0x6A82D41B)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h)(0x6A82D3E8)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h)(0x6A82D3E8)
+I (../bspCode/bspUSB.h)(0x6AD01BDE)
 F (../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c)(0x6A82D3E8)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\usbd_core.o --omf_browse g431_foc\usbd_core.crf --depend g431_foc\usbd_core.d)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h)(0x6A82D3E8)
 I (../USB_Device/Target/usbd_conf.h)(0x6A8F95D6)
@@ -3012,8 +3013,8 @@ I (D:\keilv5\ARM\ARMCOMPILER_506\include\stdarg.h)(0x5E8E3CC2)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\string.h)(0x5E8E3CC2)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\cstdarg)(0x5E8E3CC2)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\cstdio)(0x5E8E3CC2)
-F (..\bspCode\bspUSB.c)(0x6AC5955F)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\bspusb.o --omf_browse g431_foc\bspusb.crf --depend g431_foc\bspusb.d)
-I (..\bspCode\bspUSB.h)(0x6A8FCC2B)
+F (..\bspCode\bspUSB.c)(0x6AD5CB63)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\bspusb.o --omf_browse g431_foc\bspusb.crf --depend g431_foc\bspusb.d)
+I (..\bspCode\bspUSB.h)(0x6AD01BDE)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\stdint.h)(0x5E8E3CC2)
 I (../USB_Device/App/usbd_cdc_if.h)(0x6A8F95D7)
 I (../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h)(0x6A82D3E8)
@@ -3067,7 +3068,12 @@ I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h)(0x6A82D3E8
 I (../Core/Inc/main.h)(0x6A8F88EE)
 I (../USB_Device/App/usb_device.h)(0x6A8FCBC8)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\stdarg.h)(0x5E8E3CC2)
-F (..\myCode\my_mian.c)(0x6AC60EB3)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\my_mian.o --omf_browse g431_foc\my_mian.crf --depend g431_foc\my_mian.d)
+I (../myCode/foc.h)(0x6AD1A35A)
+I (../bspCode/myADC.h)(0x6AA7431D)
+I (D:\keilv5\ARM\ARMCOMPILER_506\include\errno.h)(0x5E8E3CC2)
+I (D:\keilv5\ARM\ARMCOMPILER_506\include\math.h)(0x5E8E3CC2)
+I (D:\keilv5\ARM\ARMCOMPILER_506\include\limits.h)(0x5E8E3CC2)
+F (..\myCode\my_mian.c)(0x6AD5D11E)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\my_mian.o --omf_browse g431_foc\my_mian.crf --depend g431_foc\my_mian.d)
 I (../Core/Inc/main.h)(0x6A8F88EE)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h)(0x6A82D41B)
 I (../Core/Inc/stm32g4xx_hal_conf.h)(0x6A82BF93)
@@ -3153,12 +3159,12 @@ I (../USB_Device/Target/usbd_conf.h)(0x6A8F95D6)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\stdlib.h)(0x5E8E3CC2)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h)(0x6A82D3E8)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h)(0x6A82D3E8)
-I (../bspCode/bspUSB.h)(0x6A8FCC2B)
-I (..\myCode\foc.h)(0x6AC60A21)
+I (../bspCode/bspUSB.h)(0x6AD01BDE)
+I (..\myCode\foc.h)(0x6AD1A35A)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\math.h)(0x5E8E3CC2)
 I (..\myCode\CPU_load.h)(0x6AA265AD)
-F (..\myCode\foc.c)(0x6AC60B8A)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\foc.o --omf_browse g431_foc\foc.crf --depend g431_foc\foc.d)
-I (../bspCode/bspUSB.h)(0x6A8FCC2B)
+F (..\myCode\foc.c)(0x6AD5D90C)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\foc.o --omf_browse g431_foc\foc.crf --depend g431_foc\foc.d)
+I (../bspCode/bspUSB.h)(0x6AD01BDE)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\stdint.h)(0x5E8E3CC2)
 I (../bspCode/myADC.h)(0x6AA7431D)
 I (../Core/Inc/main.h)(0x6A8F88EE)
@@ -3201,7 +3207,7 @@ I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h)(0x6A82D41B)
-I (..\myCode\foc.h)(0x6AC60A21)
+I (..\myCode\foc.h)(0x6AD1A35A)
 I (../Core/Inc/tim.h)(0x6A85676E)
 I (..\myCode\MT6816.h)(0x6AC60D8D)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\math.h)(0x5E8E3CC2)
@@ -3292,11 +3298,11 @@ I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart.h)(0x6A82D41B)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_uart_ex.h)(0x6A82D41B)
-I (..\myCode\foc.h)(0x6AC60A21)
+I (..\myCode\foc.h)(0x6AD1A35A)
 I (../bspCode/myADC.h)(0x6AA7431D)
 I (../Core/Inc/tim.h)(0x6A85676E)
 I (D:\keilv5\ARM\ARMCOMPILER_506\include\string.h)(0x5E8E3CC2)
-I (../bspCode/bspUSB.h)(0x6A8FCC2B)
+I (../bspCode/bspUSB.h)(0x6AD01BDE)
 F (..\myCode\CPU_load.c)(0x6AA265C2)(--c99 -c --cpu Cortex-M4.fp.sp -D__MICROLIB -g -O1 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include -I ../CANopenNode_STM32 -I ../CANopenNode -I ../CANopenNode/301 -I ../ObjectDictionary -I ../myCode -I ../bspCode -I ../USB_Device/App -I ../USB_Device/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc-I.\RTE\_G431_foc-ID:\arm\pack\ARM\CMSIS\6.2.0\CMSIS\Core\Include-ID:\arm\pack\Keil\STM32G4xx_DFP\1.4.0\Drivers\CMSIS\Device\ST\STM32G4xx\Include-D__UVISION_VERSION="543" -DSTM32G431xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G431xx-o g431_foc\cpu_load.o --omf_browse g431_foc\cpu_load.crf --depend g431_foc\cpu_load.d)
 I (..\myCode\CPU_load.h)(0x6AA265AD)
 I (../Core/Inc/main.h)(0x6A8F88EE)

@@ -111,6 +111,12 @@ typedef struct MotorParameters
 extern MotorParameters_t MotorParm;
 /* AI标志：非零表示编码器校准接口正在控制开环输出。 */
 extern volatile uint8_t Encoder_AI_Calibrating;
+/* Kt: Nm/A of peak dq current; Ld/Lq: H; currents: mA. */
+#define FOC_CURRENT_FEEDFORWARD_ENABLE 0
+#define FOC_CURRENT_VOLTAGE_LIMIT 0.55f /* Vphase/Vbus, below SVPWM limit */
+extern float FOC_FluxLinkageWb;
+extern float FOC_VdFeedForward;
+extern float FOC_VqFeedForward;
 extern float Vd;
 extern float Vq;
 extern float error;
@@ -151,8 +157,24 @@ extern volatile float motor_speed_rpm_filt ;
 extern float error_V;
 void FOC_SpeedCalculate(uint64_t encoder_raw);
 void FOC_POSCalculate(uint16_t encoder_raw);
+/* Mechanical units: rpm and rpm/s, 1 kHz update. */
+#define FOC_POSITION_TRAJECTORY_ENABLE 1 /* 1: enabled, 0: direct position target */
+#define FOC_POS_TRAJ_MAX_RPM 2000.0f
+#define FOC_POS_TRAJ_ACCEL_RPM_S 8000.0f
+#define FOC_POS_TRAJ_DECEL_RPM_S 8000.0f
+extern double FOC_PositionReference;
+extern float FOC_PositionVelocityRPM;
+void FOC_PositionTrajectoryReset(void);
+/* Low-speed velocity commands use an integrated position reference. */
+#define FOC_LOW_SPEED_POSITION_ENABLE 1
+#define FOC_LOW_SPEED_POSITION_RPM 200.0f
+#define FOC_LOW_SPEED_ACCEL_RPM_S 2000.0f
+float FOC_VelocityCommand(float rpm);
 float FOC_PosLoop(int64_t pos_ref);
+void FOC_SetPositionPID(float kp, float ki, float kd);
 float FOC_SpeedLoop(float speed_ref);
+void FOC_SetSpeedPID(float kp, float ki, float kd);
+void FOC_SetCurrentPI(float kp, float ki);
 
 typedef struct
 {
@@ -168,6 +190,7 @@ typedef struct
 
 
 extern POSPI_t POS_PI;
+extern float error_pos;
 
 
 signed char NumberOfPolePairs_Check(unsigned char laps_numbles);

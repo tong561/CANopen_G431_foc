@@ -68,12 +68,12 @@ MotorParameters_t MotorParm=
 {
 	.MOTOR_POLE_PAIRS=7,//七对极
 	.VBUS=12,						//母线12V
-	.ELECTRICAL_OFFSET=-0.180625f,//电角度0点偏差
+	.ELECTRICAL_OFFSET=-0.480932f,//电角度0点偏差
 	.MOTOR_ENCODER_DIR=-1,//旋转方向
 	.open_L_check_flag=0,
 	.open_Lq_check_flag=0,
-	.Ld = 1.248f,	//测量d轴电感1.248mh
-	.Lq = 1.462f,
+	.Ld = 0.001248f,	//测量d轴电感1.248mh
+	.Lq = 0.001462f,
 	.J=3e-5,
 	.Kt= 0.0478f,
 	.B=1.0e-5f
@@ -287,13 +287,31 @@ signed char NumberOfPolePairs_Check(unsigned char laps_numble)
 	char Symbol=0;//记录符号
 	FOC_SetOpenLoopVector(a,0.2);//转子先吸合1s;
 	HAL_Delay(1000);
+		HAL_Delay(1000);
+	HAL_Delay(1000);
+	//稳定，读取电角度零值对应机械位置
+	//存储电机0点偏移量
+	MotorParm.ELECTRICAL_OFFSET=-((float)MotorParm.FOC_encoder_raw/MT6816_CPR*FOC_2PI*MotorParm.MOTOR_ENCODER_DIR*MotorParm.MOTOR_POLE_PAIRS);
+	while(MotorParm.ELECTRICAL_OFFSET>=FOC_2PI)
+	{
+		MotorParm.ELECTRICAL_OFFSET-=FOC_2PI;
+	}
+	
+	while(MotorParm.ELECTRICAL_OFFSET<=-FOC_2PI)
+	{
+		MotorParm.ELECTRICAL_OFFSET+=FOC_2PI;
+		
+	}
+	usb_print("ELECTRICAL_OFFSET:%f\r\n",MotorParm.ELECTRICAL_OFFSET);
+	HAL_Delay(1000);
+	HAL_Delay(1000);
 	start_pos =POS_PI.pos;
 	for(unsigned int i=0;i<360*laps_numble;i++)
 	{
 		a+=FOC_2PI/360;
 		if(a>FOC_2PI)
 			a-=FOC_2PI;
-		FOC_SetOpenLoopVector(a,0.1);//转子旋转
+		FOC_SetOpenLoopVector(a,0.15);//转子旋转
 		HAL_Delay(1);
 		usb_print("Electrical angle:%f,%f,%f,%f,%f%%\r\n",a,ADC_parm.I_a,ADC_parm.I_b,ADC_parm.I_c,(float)i*100/(360*laps_numble));
 	}
@@ -679,7 +697,7 @@ float FOC_WrapAngle(float angle)
 }
 
 
-#define MT6816_LUT_ENABLE  1	//1=LUT补偿	//1LUT补偿
+#define MT6816_LUT_ENABLE  0	//1=LUT补偿	//1LUT补偿
 
 void FOC_UpdateElectricalAngle(void)
 {
@@ -731,18 +749,7 @@ float FOC_PI_Run( FOC_PI_t *pi, float target, float feedback, float dt)
 {
     float error;
     float output;
-		if(motor_speed_rpm_filt>0)
-		{
-			//target-=motor_speed_rpm_filt/20
-			pi->kp = 0.000157f,
-			pi->ki=1.7f;
-		}
-		else
-		{
-			pi->kp = 0.000157f,
-			pi->ki = 0.958f;
-		}
-    error = target - feedback;
+		    error = target - feedback;
     pi->integral +=pi->ki *error *dt;
     pi->integral = FOC_Limit(pi->integral,pi->out_min,pi->out_max);
     output =pi->kp * error +pi->integral;
@@ -767,38 +774,55 @@ float Vd;
 float Vq;
 float Id_ref = 0.0f;
 float Iq_ref = 000.0f;
+float FOC_FluxLinkageWb=0.0f;
+float FOC_VdFeedForward=0.0f;
+float FOC_VqFeedForward=0.0f;
+
 float FOC_CurrentLoop(void)
 {
-    
-
-    
-
-    float V_alpha;
-    float V_beta;
-	
-    Vd = FOC_PI_Run(&PI_Id, Id_ref,I_d, FOC_DT);
-		Vq = FOC_PI_Run1( &PI_Iq,Iq_ref,I_q, FOC_DT);
-		
+    float V_alpha, V_beta;
+#if FOC_CURRENT_FEEDFORWARD_ENABLE
+    float poles=(float)MotorParm.MOTOR_POLE_PAIRS;
+    float omega_e, vd_ff, vq_ff, d_error, q_error;
+    float d_integral, q_integral, d_raw, q_raw, magnitude, scale=1.0f;
+    FOC_VdFeedForward=FOC_VqFeedForward=0.0f;
+    FOC_FluxLinkageWb=0.0f;
+    if(poles>0.0f && MotorParm.VBUS>0.1f && MotorParm.Kt>0.0f)
+    {
+        FOC_FluxLinkageWb=MotorParm.Kt/(1.5f*poles);
+        /* Electrical angle includes encoder direction; do not use speed command. */
+        omega_e=motor_speed_rpm_filt*(FOC_2PI/60.0f)*poles*MotorParm.MOTOR_ENCODER_DIR;
+        vd_ff=-omega_e*MotorParm.Lq*(I_q*0.001f);
+        vq_ff=omega_e*(MotorParm.Ld*(I_d*0.001f)+FOC_FluxLinkageWb);
+        /* SVPWM uses duty=0.5-voltage: physical voltage=-command*VBUS. */
+        FOC_VdFeedForward=-vd_ff/MotorParm.VBUS;
+        FOC_VqFeedForward=-vq_ff/MotorParm.VBUS;
+    }
+    d_error=Id_ref-I_d;
+    q_error=Iq_ref-I_q;
+    error=q_error;
+    d_integral=FOC_Limit(PI_Id.integral+PI_Id.ki*d_error*FOC_DT,PI_Id.out_min,PI_Id.out_max);
+    q_integral=FOC_Limit(PI_Iq.integral+PI_Iq.ki*q_error*FOC_DT,PI_Iq.out_min,PI_Iq.out_max);
+    d_raw=PI_Id.kp*d_error+d_integral+FOC_VdFeedForward;
+    q_raw=PI_Iq.kp*q_error+q_integral+FOC_VqFeedForward;
+    magnitude=sqrtf(d_raw*d_raw+q_raw*q_raw);
+    if(magnitude>FOC_CURRENT_VOLTAGE_LIMIT) scale=FOC_CURRENT_VOLTAGE_LIMIT/magnitude;
+    Vd=d_raw*scale;
+    Vq=q_raw*scale;
+    /* Reject increments that push further into the shared voltage limit. */
+    if((d_raw-Vd)*d_error<=0.0f) PI_Id.integral=d_integral;
+    if((q_raw-Vq)*q_error<=0.0f) PI_Iq.integral=q_integral;
+#else
+    FOC_FluxLinkageWb=0.0f;
+    FOC_VdFeedForward=FOC_VqFeedForward=0.0f;
+    Vd=FOC_PI_Run(&PI_Id,Id_ref,I_d,FOC_DT);
+    Vq=FOC_PI_Run1(&PI_Iq,Iq_ref,I_q,FOC_DT);
+#endif
     FOC_InvPark(Vd,Vq,theta_e,&V_alpha,&V_beta);
-
     FOC_SVPWM(V_alpha,V_beta);
-	return Vq;
+    return Vq;
 }
-
-
-
-//float FOC_CurrentLoop(void)
-//{
-//    float Id_ref = 0.0f;
-//    float Iq_ref = 100.0f;
-
-//    float Vd;
-//    float Vq;
-
-//    float V_alpha;
-//    float V_beta;
-
-//    /* d轴完全关闭 */
+/* d轴完全关闭 */
 //    Vd = 0.0f;
 
 //    /* 只测试q轴P控制 */
@@ -936,22 +960,22 @@ float Speed_Friction_FeedForward(float speed_rpm)
         /*
          * 正转低速补偿
          */
-        iq_ff = -60.0f;
+        iq_ff = -0.0f;
     }
     else if(speed_rpm < -5.0f)
     {
         /*
          * 反转低速补偿
          */
-        iq_ff = 60.0f;
+        iq_ff = 0.0f;
     }
 
     return iq_ff;
 }
 SpeedPI_t Speed_PI = {
-    .kp = 0.5f,//1.8f,
-    .ki = 0.03f,
-		.kd =0.0f,// 6.1f,
+    .kp = 5.5f,// COM32 tuned: +/-2500 rpm reversal
+    .ki = 0.1f,
+		.kd =7.5f,
     .integral = 0.0f,
     .out_limit = 1500.0f
 };
@@ -1001,33 +1025,27 @@ float FOC_SpeedLoop(float speed_ref)
 //		long pos;
 //} POSPI_t;
 POSPI_t POS_PI = {
-    .kp = 0.15f,
-    .ki = 0.00055f,
+    .kp = 0.50f,
+    .ki = 0.40f,
 		.kd = 0.0f,
     .integral = 0.0f,
-    .out_limit =80.0f,
+    .out_limit =2500.0f,
 		.pos=0
 };
-
-
 void FOC_POSCalculate(uint16_t encoder_raw)
 {
     static uint16_t last_raw = 0;
     static uint8_t first = 1;
-
     int32_t delta;
-
     if(first)
     {
         last_raw = encoder_raw;
         first = 0;
         return;
     }
-
     delta =
         (int32_t)encoder_raw -
         (int32_t)last_raw;
-
     /*
      * 正转跨零：
      * 16380 -> 3
@@ -1038,7 +1056,6 @@ void FOC_POSCalculate(uint16_t encoder_raw)
     {
         delta += ENCODER_CPR;
     }
-
     /*
      * 反转跨零：
      * 3 -> 16380
@@ -1049,36 +1066,150 @@ void FOC_POSCalculate(uint16_t encoder_raw)
     {
         delta -= ENCODER_CPR;
     }
-
     POS_PI.pos += delta;
-
     last_raw = encoder_raw;
 }
 
 float error_pos=0.0f;
+/* Retarget without resetting the moving reference. */
+double FOC_PositionReference=0.0;
+float FOC_PositionVelocityRPM=0.0f;
+static uint8_t position_trajectory_active=0U;
+static uint8_t low_speed_position_active=0U;
+void FOC_PositionTrajectoryReset(void)
+{
+    position_trajectory_active=0U;
+    low_speed_position_active=0U;
+    FOC_PositionVelocityRPM=0.0f;
+    POS_PI.integral=0.0f;
+}
+static void FOC_PositionTrajectoryStep(int64_t target)
+{
+    const double dt=0.001;
+    const double scale=(double)ENCODER_CPR/60.0;
+    double vmax=FOC_POS_TRAJ_MAX_RPM;
+    double accel=FOC_POS_TRAJ_ACCEL_RPM_S*scale;
+    double decel=FOC_POS_TRAJ_DECEL_RPM_S*scale;
+    double distance, direction, v, next, wanted, budget, step;
+    if(!position_trajectory_active)
+    {
+        FOC_PositionReference=(double)POS_PI.pos;
+        FOC_PositionVelocityRPM=motor_speed_rpm_filt;
+        position_trajectory_active=1U;
+    }
+    if(vmax>POS_PI.out_limit) vmax=POS_PI.out_limit;
+    vmax*=scale;
+    distance=(double)target-FOC_PositionReference;
+    direction=(distance<0.0)?-1.0:1.0;
+    v=(double)FOC_PositionVelocityRPM*scale;
+    /* Reserve this tick's travel and next tick's braking distance. */
+    budget=direction*distance-0.5*direction*v*dt;
+    wanted=(budget>0.0)?sqrt(0.25*decel*decel*dt*dt+2.0*decel*budget)-0.5*decel*dt:0.0;
+    if(wanted>vmax) wanted=vmax;
+    wanted*=direction;
+    step=((v*wanted<0.0)||(fabs(wanted)<fabs(v)))?decel*dt:accel*dt;
+    next=wanted;
+    if(next>v+step) next=v+step;
+    if(next<v-step) next=v-step;
+    /* Brake to zero before accelerating in the opposite direction. */
+    if(v*wanted<0.0 && v*next<0.0) next=0.0;
+    FOC_PositionReference+=0.5*(v+next)*dt;
+    FOC_PositionVelocityRPM=(float)(next/scale);
+    /* Sub-count numerical settling: <0.01 count and <0.01 rpm. */
+    if(fabs((double)target-FOC_PositionReference)<0.01 && fabs(next/scale)<0.01)
+    {
+        FOC_PositionReference=(double)target;
+        FOC_PositionVelocityRPM=0.0f;
+    }
+}
+
+static float FOC_PositionFeedback(void)
+{
+    float speed_ref, candidate, output, limit=POS_PI.out_limit;
+    error_pos=(float)(FOC_PositionReference-(double)POS_PI.pos);
+    candidate=POS_PI.integral+error_pos*SPEED_DT;
+    if(candidate>300.0f) candidate=300.0f;
+    if(candidate< -300.0f) candidate=-300.0f;
+    output=FOC_PositionVelocityRPM+POS_PI.kp*error_pos
+        +POS_PI.kd*(FOC_PositionVelocityRPM-motor_speed_rpm_filt)*((float)ENCODER_CPR/60.0f);
+    speed_ref=output+POS_PI.ki*candidate;
+    /* Reject integration that drives the speed command further into saturation. */
+    if((speed_ref<=limit && speed_ref>=-limit)
+       || (speed_ref>limit && POS_PI.ki*error_pos<0.0f)
+       || (speed_ref< -limit && POS_PI.ki*error_pos>0.0f))
+        POS_PI.integral=candidate;
+    speed_ref=output+POS_PI.ki*POS_PI.integral;
+    if(speed_ref>limit) speed_ref=limit;
+    if(speed_ref< -limit) speed_ref=-limit;
+    return FOC_SpeedLoop(speed_ref);
+}
 
 float FOC_PosLoop(int64_t pos_ref)
 {
-   
-    float speed_ref;
-
-    error_pos = (pos_ref-POS_PI.pos );			//期望-实际=error
-		POS_PI.integral+=error_pos*SPEED_DT;
-		if(POS_PI.integral>1500)
-		{
-			POS_PI.integral=1500;
-		}
-		else	if(POS_PI.integral<-1500)
-		{
-			POS_PI.integral=-1500;
-		}
-    speed_ref=POS_PI.kp * error_pos+POS_PI.ki * POS_PI.integral;
-	
-    if(speed_ref > POS_PI.out_limit)
-        speed_ref = POS_PI.out_limit;
-
-    if(speed_ref < -POS_PI.out_limit)
-        speed_ref = -POS_PI.out_limit;
-		
-   return FOC_SpeedLoop( speed_ref);
+    if(low_speed_position_active) FOC_PositionTrajectoryReset();
+#if FOC_POSITION_TRAJECTORY_ENABLE
+    FOC_PositionTrajectoryStep(pos_ref);
+#else
+    FOC_PositionReference=(double)pos_ref;
+    FOC_PositionVelocityRPM=0.0f;
+#endif
+    return FOC_PositionFeedback();
 }
+
+float FOC_VelocityCommand(float rpm)
+{
+#if FOC_LOW_SPEED_POSITION_ENABLE
+    if(fabsf(rpm)<=FOC_LOW_SPEED_POSITION_RPM)
+    {
+        float previous, next, step=FOC_LOW_SPEED_ACCEL_RPM_S*SPEED_DT;
+        if(!low_speed_position_active)
+        {
+            FOC_PositionTrajectoryReset();
+            FOC_PositionReference=(double)POS_PI.pos;
+            FOC_PositionVelocityRPM=motor_speed_rpm_filt;
+            low_speed_position_active=1U;
+        }
+        previous=FOC_PositionVelocityRPM;
+        next=rpm;
+        if(next>previous+step) next=previous+step;
+        if(next<previous-step) next=previous-step;
+        /* Keep fractional encoder counts, including at 1 rpm. */
+        FOC_PositionReference+=0.5*((double)previous+next)*SPEED_DT*((double)ENCODER_CPR/60.0);
+        FOC_PositionVelocityRPM=next;
+        return FOC_PositionFeedback();
+    }
+#endif
+    FOC_PositionTrajectoryReset();
+    return FOC_SpeedLoop(rpm);
+}
+
+void FOC_SetSpeedPID(float kp, float ki, float kd)
+{
+    uint32_t mask=__get_PRIMASK();
+    __disable_irq();
+    Speed_PI.kp=kp;
+    Speed_PI.ki=ki;
+    Speed_PI.kd=kd;
+    Speed_PI.integral=0.0f;
+    last_error_V=0.0f;
+    last_error_V2=0.0f;
+    __set_PRIMASK(mask);
+}
+void FOC_SetCurrentPI(float kp, float ki)
+{
+    uint32_t mask=__get_PRIMASK();
+    __disable_irq();
+    PI_Id.kp=PI_Iq.kp=kp;
+    PI_Id.ki=PI_Iq.ki=ki;
+    PI_Id.integral=PI_Iq.integral=0.0f;
+    __set_PRIMASK(mask);
+}
+
+void FOC_SetPositionPID(float kp,float ki,float kd)
+	{
+		uint32_t mask=__get_PRIMASK();
+		__disable_irq();
+		POS_PI.kp=kp;POS_PI.ki=ki;
+		POS_PI.kd=kd;POS_PI.integral=0.0f;
+		__set_PRIMASK(mask);
+	}
